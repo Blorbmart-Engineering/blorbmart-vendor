@@ -303,6 +303,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
             </div>
           </div>
         )}
+        </div>
       </div>
 
       <PinModal
