@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { compressImageFile } from '../../lib/image';
-import { uploadStoreLogo, updateStoreProfile, fetchStoreProfile, uploadProfilePhotoToCloudinary, updateVendorProfilePhoto, getVendorProfilePhoto, deleteVendorProfilePhoto } from '../../services/vendorPortal';
+import { uploadStoreLogo, updateStoreProfile, fetchStoreProfile, uploadProfilePhotoToCloudinary, updateVendorProfilePhoto, getVendorProfilePhoto, deleteVendorProfilePhoto, markVendorProfileComplete } from '../../services/vendorPortal';
 
 interface ProfileScreenProps {
   onShowToast: (msg: string) => void;
+  uid?: string;
+  onProfileSaved?: () => void;
 }
 
 const BUSINESS_CATEGORIES = [
@@ -20,7 +22,7 @@ const BUSINESS_CATEGORIES = [
   'Other',
 ];
 
-export function ProfileScreen({ onShowToast }: ProfileScreenProps) {
+export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScreenProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -161,7 +163,11 @@ export function ProfileScreen({ onShowToast }: ProfileScreenProps) {
     try {
       setSaving(true);
       await updateStoreProfile(formData);
+      if (uid) {
+        await markVendorProfileComplete(uid).catch(() => undefined);
+      }
       onShowToast('Profile updated successfully!');
+      onProfileSaved?.();
     } catch (error) {
       onShowToast(error instanceof Error ? error.message : 'Failed to update profile');
     } finally {

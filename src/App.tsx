@@ -17,7 +17,7 @@ import { ProfileScreen } from './components/screens/ProfileScreen';
 import { SecurityScreen } from './components/screens/SecurityScreen';
 import { TransactionsScreen } from './components/screens/TransactionsScreen';
 import { WithdrawalsScreen } from './components/screens/WithdrawalsScreen';
-import { INITIAL_FOOD_ITEMS, INITIAL_ORDERS, NOTIFS, TXNS, WEEK_SCHEDULE, type FoodItem, type Order, type Txn, type WeekScheduleRow } from './data/mock';
+import { WEEK_SCHEDULE, type FoodItem, type Notif, type Order, type Txn, type WeekScheduleRow } from './data/mock';
 import { auth } from './lib/firebase';
 import { getVendorProfile, getVendorUserProfile, isVendorOtpVerified, signOutVendor } from './services/vendorAuth';
 import {
@@ -82,11 +82,11 @@ function App() {
 
   const [wallet, setWallet] = useState<WalletOverview | null>(null);
   const [summary, setSummary] = useState<WalletSummary | null>(null);
-  const [txns, setTxns] = useState<Txn[]>(TXNS);
+  const [txns, setTxns] = useState<Txn[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
-  const [notifs, setNotifs] = useState(NOTIFS);
-  const [foodItems, setFoodItems] = useState<FoodItem[]>(INITIAL_FOOD_ITEMS);
-  const [orders, setOrders] = useState<VendorOrder[]>(INITIAL_ORDERS as VendorOrder[]);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [orders, setOrders] = useState<VendorOrder[]>([]);
   const [chart, setChart] = useState<{ d: string; v: number }[]>([]);
   const [activeOrderTab, setActiveOrderTab] = useState<Order['status']>('new');
   const [kitchenOpen, setKitchenOpen] = useState(true);
@@ -274,6 +274,13 @@ function App() {
       return;
     }
 
+    // Check if profile is complete before adding food
+    if (!item.id && !vendorProfile?.profileComplete) {
+      showToast('Please complete your store profile before adding food items.', false);
+      setFoodModalOpen(false);
+      return;
+    }
+
     try {
       const id = await saveVendorProduct({
         item,
@@ -406,6 +413,8 @@ function App() {
       pauseMinutes: next.pauseMinutes || 0,
       weeklyHours: payload.weeklyHours,
       holidays: payload.holidays,
+      uid: currentUser?.uid,
+      storeId: String(store?.id || store?.storeId || ''),
     });
     setStoreControls(payload);
     setKitchenOpen(payload.isOpen);
@@ -477,6 +486,7 @@ function App() {
             {page === 'menu' && (
               <MenuScreen
                 foodItems={foodItems}
+                profileComplete={vendorProfile?.profileComplete}
                 onOpenAdd={() => { setFoodModalOpen(true); setEditingFoodId(null); }}
                 onEdit={(id) => { setEditingFoodId(id); setFoodModalOpen(true); }}
                 onCopy={copyFood}
@@ -556,7 +566,11 @@ function App() {
               />
             )}
             {page === 'profile' && (
-              <ProfileScreen onShowToast={(msg) => showToast(msg)} />
+              <ProfileScreen
+                onShowToast={(msg) => showToast(msg)}
+                uid={currentUser?.uid}
+                onProfileSaved={() => setVendorProfile((prev) => prev ? { ...prev, profileComplete: true } : prev)}
+              />
             )}
             {page === 'txns' && (
               <TransactionsScreen txns={txns} onOpenTxDetail={(id) => setTxDetailId(id)} />

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import type { BankAccount } from '../../types/portal';
-import { fetchBanks, verifyBankAccount, saveBankAccount, deleteBankAccount } from '../../services/vendorPortal';
+import { PinModal } from '../modals/PinModal';
+import { fetchBanks, verifyBankAccount, saveBankAccount, deleteBankAccount, verifyWalletPin } from '../../services/vendorPortal';
 
 interface Bank {
   name: string;
@@ -23,6 +24,8 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
   const [verifying, setVerifying] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingBanks, setLoadingBanks] = useState(false);
+  const [pinModalOpen, setPinModalOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'update' | 'delete' | null>(null);
 
   useEffect(() => {
     if (editing) {
@@ -73,6 +76,18 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
       return;
     }
 
+    // If updating existing account, require PIN verification
+    if (bankAccount) {
+      setPendingAction('update');
+      setPinModalOpen(true);
+      return;
+    }
+
+    // New account - save directly
+    await performSave();
+  };
+
+  const performSave = async () => {
     setSaving(true);
     try {
       const saved = await saveBankAccount(selectedBankCode, acctInput);
@@ -92,23 +107,48 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to remove your bank account?')) return;
     
+    // Require PIN verification for deletion
+    setPendingAction('delete');
+    setPinModalOpen(true);
+  };
+
+  const performDelete = async () => {
+    setSaving(true);
     try {
       await deleteBankAccount();
       onBankAccountChange?.(null);
       onShowToast('Bank account removed');
     } catch (error) {
       onShowToast(error instanceof Error ? error.message : 'Failed to remove bank account');
+    } finally {
+      setSaving(false);
     }
   };
 
-  return (
-    <div id="screen-bank" className="screen">
-      <div className="fu">
-        <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Bank Account</div>
-        <div style={{ color: 'var(--t3)', fontSize: 13, marginBottom: 20 }}>Your payout destination</div>
+  const handlePinSubmit = async (pin: string) => {
+    const valid = await verifyWalletPin(pin);
+    if (!valid) {
+      throw new Error('Incorrect PIN. Please try again.');
+    }
+    if (pendingAction === 'update') {
+      await performSave();
+    } else if (pendingAction === 'delete') {
+      await performDelete();
+    }
+    setPendingAction(null);
+    setPinModalOpen(false);
+  };
 
-        {!editing && (
-          <div id="bank-view" style={{ maxWidth: 500 }}>
+
+  return (
+    <>
+      <div id="screen-bank" className="screen">
+        <div className="fu">
+          <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 22, marginBottom: 4 }}>Bank Account</div>
+          <div style={{ color: 'var(--t3)', fontSize: 13, marginBottom: 20 }}>Your payout destination</div>
+
+          {!editing && (
+            <div id="bank-view" style={{ maxWidth: 500 }}>
             {bankAccount ? (
               <>
                 <div style={{ background: 'linear-gradient(135deg,#1A2535,#0F1825)', border: '1px solid var(--b2)', borderRadius: 14, padding: '22px 22px 18px', marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
@@ -264,6 +304,18 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
           </div>
         )}
       </div>
-    </div>
+
+      <PinModal
+        open={pinModalOpen}
+        onClose={() => {
+          setPinModalOpen(false);
+          setPendingAction(null);
+        }}
+        onSubmit={handlePinSubmit}
+        processing={saving}
+        title={pendingAction === 'delete' ? 'Confirm Deletion' : 'Verify Bank Update'}
+        description={pendingAction === 'delete' ? 'Enter your PIN to remove your bank account.' : 'Enter your PIN to update your bank account.'}
+      />
+    </>
   );
 }

@@ -147,6 +147,8 @@ const writeVendorUserDocs = async (
       walletBalance: 0,
       rating: 0,
       totalSales: 0,
+      isRestaurant: true,
+      profileComplete: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     },
@@ -350,6 +352,8 @@ export const getVendorProfile = async (uid: string): Promise<VendorProfile | nul
     walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : 0,
     rating: typeof data.rating === 'number' ? data.rating : 0,
     totalSales: typeof data.totalSales === 'number' ? data.totalSales : 0,
+    isRestaurant: Boolean(data.isRestaurant),
+    profileComplete: Boolean(data.profileComplete),
     createdAt: toDate(data.createdAt),
     updatedAt: toDate(data.updatedAt),
   }

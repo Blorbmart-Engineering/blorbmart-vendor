@@ -3,6 +3,7 @@ import type { FoodItem } from '../../data/mock';
 
 interface MenuScreenProps {
   foodItems: FoodItem[];
+  profileComplete?: boolean;
   onOpenAdd: () => void;
   onEdit: (id: string) => void | Promise<void>;
   onCopy: (id: string) => void | Promise<void>;
@@ -13,7 +14,7 @@ interface MenuScreenProps {
   onReorder: (ids: string[]) => void | Promise<void>;
 }
 
-export function MenuScreen({ foodItems, onOpenAdd, onEdit, onCopy, onDelete, onToggleAvail, onToggleFeatured, onBulkAction, onReorder }: MenuScreenProps) {
+export function MenuScreen({ foodItems, profileComplete = true, onOpenAdd, onEdit, onCopy, onDelete, onToggleAvail, onToggleFeatured, onBulkAction, onReorder }: MenuScreenProps) {
   const [catFilter, setCatFilter] = useState<'all' | FoodItem['cat']>('all');
   const [query, setQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -62,11 +63,17 @@ export function MenuScreen({ foodItems, onOpenAdd, onEdit, onCopy, onDelete, onT
             <div className="page-title">Make editing the menu feel fast and obvious.</div>
             <div className="page-subtitle">Vendors should be able to spot sold-out items, search quickly, and add or update meals without hunting around the page.</div>
           </div>
-          <button className="btn btn-primary" onClick={onOpenAdd}>
+          <button className="btn btn-primary" onClick={onOpenAdd} disabled={!profileComplete}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
             Add Menu Item
           </button>
         </div>
+
+        {!profileComplete && (
+          <div style={{ padding: '12px 14px', borderRadius: 'var(--r2)', background: 'var(--yeg)', border: '1px solid rgba(245,158,11,.18)', fontSize: 12.5, color: 'var(--ye)', marginBottom: 18 }}>
+            ⚠ Please complete your store profile before adding menu items. Go to <strong>Store Profile</strong> to get started.
+          </div>
+        )}
 
         <div className="quick-grid" style={{ marginBottom: 22 }}>
           <div className="metric-card"><div className="metric-label">Total Items</div><div className="metric-value">{total}</div><div className="metric-note">Everything currently listed.</div></div>

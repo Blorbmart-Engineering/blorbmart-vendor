@@ -163,7 +163,6 @@ export const uploadProfilePhotoToCloudinary = async (
     formData.append('file', imageDataUrl)
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
     formData.append('folder', 'blorbmart/vendor-profiles')
-    formData.append('transformation', 'c_fill,w_200,h_200,q_auto,f_auto')
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`)
@@ -359,7 +358,6 @@ export const uploadStoreLogo = async (
     formData.append('file', imageDataUrl)
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET)
     formData.append('folder', 'blorbmart/vendor-logos')
-    formData.append('transformation', 'c_fill,w_400,h_400,q_auto,f_auto')
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`)
@@ -382,6 +380,10 @@ export const uploadStoreLogo = async (
 
     xhr.send(formData)
   })
+}
+
+export const markVendorProfileComplete = async (uid: string) => {
+  await setDoc(doc(db, 'vendors', uid), { profileComplete: true, updatedAt: serverTimestamp() }, { merge: true })
 }
 
 export const updateStoreProfile = async (profileData: {
@@ -661,11 +663,15 @@ export const saveVendorStoreControls = async ({
   pauseMinutes,
   weeklyHours,
   holidays,
+  uid,
+  storeId,
 }: {
   isOpen: boolean
   pauseMinutes: number
   weeklyHours: unknown[]
   holidays: unknown[]
+  uid?: string
+  storeId?: string
 }) => {
   await apiFetchAuth('/api/stores/me/status', {
     method: 'PATCH',
@@ -681,6 +687,19 @@ export const saveVendorStoreControls = async ({
     method: 'PUT',
     body: JSON.stringify({ weeklyHours, holidays }),
   })
+
+  if (uid) {
+    let storeRef
+    if (storeId) {
+      storeRef = doc(db, 'stores', storeId)
+    } else {
+      const snap = await getDocs(query(collection(db, 'stores'), where('vendorId', '==', uid), limit(1)))
+      storeRef = snap.docs[0]?.ref
+    }
+    if (storeRef) {
+      await setDoc(storeRef, { isOpen, weeklyHours, holidays, updatedAt: serverTimestamp() }, { merge: true })
+    }
+  }
 }
 
 export const fetchVendorNotifications = async (uid: string): Promise<Notif[]> => {

@@ -33,6 +33,8 @@ export interface VendorProfile {
   walletBalance?: number
   rating?: number
   totalSales?: number
+  isRestaurant?: boolean
+  profileComplete?: boolean
   createdAt?: Date | null
   updatedAt?: Date | null
 }
