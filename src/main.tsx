@@ -30,7 +30,7 @@ import('./App.tsx')
             Unable to load
           </h2>
           <p style={{ marginBottom: 12, fontSize: 14, lineHeight: 1.6 }}>
-            The app could not start due to a configuration error.
+            The app could not start due to a configuration error. Please check that all environment variables are set.
           </p>
           <pre style={{
             background: '#161c26',
