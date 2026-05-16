@@ -30,6 +30,8 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [uploadingProfile, setUploadingProfile] = useState(false);
   const [profileUploadProgress, setProfileUploadProgress] = useState(0);
+  const [gettingLocation, setGettingLocation] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -63,12 +65,44 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
         category: String(profile.category || ''),
         logo: String(profile.logo || ''),
       });
+      const savedLat = Number(profile.latitude);
+      const savedLng = Number(profile.longitude);
+      if (Number.isFinite(savedLat) && Number.isFinite(savedLng) && savedLat !== 0 && savedLng !== 0) {
+        setLocationCoords({ latitude: savedLat, longitude: savedLng });
+      }
     } catch (error) {
       console.error('Failed to load profile:', error);
       onShowToast('Failed to load profile');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      onShowToast('Location is not supported by your browser');
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationCoords({
+          latitude: Number(position.coords.latitude.toFixed(6)),
+          longitude: Number(position.coords.longitude.toFixed(6)),
+        });
+        setGettingLocation(false);
+        onShowToast('Location captured — save your profile to confirm it');
+      },
+      (error) => {
+        setGettingLocation(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          onShowToast('Location access denied. Please allow location in your browser settings.');
+        } else {
+          onShowToast('Could not get your location. Please try again.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const handleLogoUpload = async (file: File) => {
@@ -162,7 +196,10 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
 
     try {
       setSaving(true);
-      await updateStoreProfile(formData);
+      await updateStoreProfile({
+        ...formData,
+        ...(locationCoords ?? {}),
+      });
       if (uid) {
         await markVendorProfileComplete(uid).catch(() => undefined);
       }
@@ -412,6 +449,44 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
                 onChange={(e) => setFormData((prev) => ({ ...prev, state: e.target.value }))}
               />
             </div>
+          </div>
+
+          {/* Kitchen Location */}
+          <div style={{ marginBottom: 28 }}>
+            <label className="lbl">Kitchen Location</label>
+            <div style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10 }}>
+              Required for delivery fee calculation. Stand at your kitchen and tap the button below.
+            </div>
+            {locationCoords ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, padding: '10px 14px', background: 'var(--s2)', borderRadius: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span style={{ fontSize: 12.5, color: 'var(--t2)', flex: 1 }}>
+                  {locationCoords.latitude.toFixed(5)}, {locationCoords.longitude.toFixed(5)}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--gr)', fontWeight: 600 }}>Set</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--re)', marginBottom: 10, fontWeight: 500 }}>
+                No location set — delivery fee cannot be calculated for your orders.
+              </div>
+            )}
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 13, padding: '9px 16px', border: '1.5px solid var(--b2)' }}
+              onClick={handleGetLocation}
+              disabled={gettingLocation}
+              type="button"
+            >
+              {gettingLocation ? (
+                <>
+                  <span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid var(--or)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', marginRight: 8 }} />
+                  Getting location...
+                </>
+              ) : locationCoords ? 'Update My Location' : 'Use My Current Location'}
+            </button>
           </div>
 
           {/* Save Button */}

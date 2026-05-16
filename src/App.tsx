@@ -487,6 +487,7 @@ function App() {
               <MenuScreen
                 foodItems={foodItems}
                 profileComplete={vendorProfile?.profileComplete}
+                locationSet={Boolean(store?.latitude)}
                 onOpenAdd={() => { setFoodModalOpen(true); setEditingFoodId(null); }}
                 onEdit={(id) => { setEditingFoodId(id); setFoodModalOpen(true); }}
                 onCopy={copyFood}
@@ -495,6 +496,7 @@ function App() {
                 onToggleFeatured={onToggleFeatured}
                 onBulkAction={onBulkAction}
                 onReorder={onReorder}
+                onGoToProfile={() => handleNavigate('profile')}
               />
             )}
             {page === 'orders' && (

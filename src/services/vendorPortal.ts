@@ -396,6 +396,8 @@ export const updateStoreProfile = async (profileData: {
   state?: string
   logo?: string
   category?: string
+  latitude?: number
+  longitude?: number
 }): Promise<void> => {
   const response = await apiFetchAuth('/api/stores/me', {
     method: 'PATCH',
@@ -576,53 +578,52 @@ export const setVendorProductFeatured = async (id: string, featured: boolean) =>
   })
 }
 
-export const fetchVendorOrders = async (uid: string): Promise<VendorOrder[]> => {
-  const snapshot = await getDocs(query(collection(db, 'orders'), where('vendorIds', 'array-contains', uid)))
+export const fetchVendorOrders = async (_uid: string): Promise<VendorOrder[]> => {
+  const response = await apiFetchAuth('/api/orders/vendor')
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to fetch orders')
 
-  return snapshot.docs
-    .map((orderDoc) => {
-      const data = orderDoc.data() as Record<string, unknown>
-      const orderStatus = String(data.orderStatus || data.status || 'placed')
-      const storeOrders = Array.isArray(data.storeOrders) ? data.storeOrders as Record<string, unknown>[] : []
-      const matchingStoreOrders = storeOrders.filter((storeOrder) => String(storeOrder.vendorId || '') === uid)
-      const selectedStoreOrder = matchingStoreOrders[0] || storeOrders[0] || {}
-      const itemsSource = Array.isArray(selectedStoreOrder.items) ? selectedStoreOrder.items as Record<string, unknown>[] : []
-      const deliveryAddress =
-        data.deliveryAddress && typeof data.deliveryAddress === 'object'
-          ? (data.deliveryAddress as Record<string, unknown>)
-          : null
+  const orders = (payload.data ?? []) as Record<string, unknown>[]
 
-      return {
-        id: String(data.orderId || orderDoc.id),
-        backendStatus: orderStatus,
-        status: statusToUiStatus(orderStatus),
-        customer: String(data.userName || 'Customer'),
-        addr: String(
-          deliveryAddress
-            ? [deliveryAddress.street, deliveryAddress.city, deliveryAddress.state].filter(Boolean).join(', ')
-            : data.deliveryAddress || data.address || 'Address unavailable',
-        ),
-        items: itemsSource.map((item) => ({
-          name: String(item.productName || item.name || 'Item'),
-          qty: Number(item.quantity || item.qty || 1),
-          price: Number(item.price || 0),
-          prepMinutes: Number(item.prepMinutes || 0) || undefined,
-        })),
-        total: Number(selectedStoreOrder.total || data.totalAmount || 0),
-        placed: formatRelative(data.createdAt),
-        note: String(data.notes || data.note || ''),
-        readyInMinutes: Number(data.readyInMinutes || selectedStoreOrder.readyInMinutes || 0) || undefined,
-        delayNotices: Array.isArray(data.delayNotices)
-          ? data.delayNotices.map((entry: Record<string, unknown>) => ({
-              delayMinutes: Number(entry.delayMinutes || 0),
-              reason: String(entry.reason || 'Delay'),
-              createdAt: String(entry.createdAt || ''),
-            }))
-          : [],
-        createdAtMs: toMillis(data.createdAt),
-      } as VendorOrder
-    })
-    .sort((a, b) => b.createdAtMs - a.createdAtMs)
+  return orders.map((data) => {
+    const orderStatus = String(data.orderStatus || data.status || 'placed')
+    const matchingStoreOrder = (data.matchingStoreOrder ?? {}) as Record<string, unknown>
+    const itemsSource = Array.isArray(data.items) ? data.items as Record<string, unknown>[] : []
+    const deliveryAddress =
+      data.deliveryAddress && typeof data.deliveryAddress === 'object'
+        ? (data.deliveryAddress as Record<string, unknown>)
+        : null
+
+    return {
+      id: String(data.orderId || data.id),
+      backendStatus: orderStatus,
+      status: statusToUiStatus(orderStatus),
+      customer: String(data.userName || 'Customer'),
+      addr: String(
+        deliveryAddress
+          ? [deliveryAddress.street, deliveryAddress.city, deliveryAddress.state].filter(Boolean).join(', ')
+          : data.deliveryAddress || data.address || 'Address unavailable',
+      ),
+      items: itemsSource.map((item) => ({
+        name: String(item.productName || item.name || 'Item'),
+        qty: Number(item.quantity || item.qty || 1),
+        price: Number(item.price || 0),
+        prepMinutes: Number(item.prepMinutes || 0) || undefined,
+      })),
+      total: Number(data.storeTotal || data.totalAmount || 0),
+      placed: formatRelative(data.createdAt),
+      note: String(data.notes || data.note || ''),
+      readyInMinutes: Number(data.readyInMinutes || matchingStoreOrder.readyInMinutes || 0) || undefined,
+      delayNotices: Array.isArray(data.delayNotices)
+        ? (data.delayNotices as Record<string, unknown>[]).map((entry) => ({
+            delayMinutes: Number(entry.delayMinutes || 0),
+            reason: String(entry.reason || 'Delay'),
+            createdAt: String(entry.createdAt || ''),
+          }))
+        : [],
+      createdAtMs: toMillis(data.createdAt),
+    } as VendorOrder
+  })
 }
 
 export const advanceVendorOrderStatus = async (order: VendorOrder) => {
