@@ -25,7 +25,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
   const [saving, setSaving] = useState(false);
   const [loadingBanks, setLoadingBanks] = useState(false);
   const [pinModalOpen, setPinModalOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'update' | 'delete' | null>(null);
+  const [pendingAction, setPendingAction] = useState<'add' | 'update' | 'delete' | null>(null);
 
   useEffect(() => {
     if (editing) {
@@ -76,15 +76,9 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
       return;
     }
 
-    // If updating existing account, require PIN verification
-    if (bankAccount) {
-      setPendingAction('update');
-      setPinModalOpen(true);
-      return;
-    }
-
-    // New account - save directly
-    await performSave();
+    // Always require PIN before saving any bank account
+    setPendingAction(bankAccount ? 'update' : 'add');
+    setPinModalOpen(true);
   };
 
   const performSave = async () => {
@@ -105,9 +99,6 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
   };
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to remove your bank account?')) return;
-    
-    // Require PIN verification for deletion
     setPendingAction('delete');
     setPinModalOpen(true);
   };
@@ -130,7 +121,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     if (!valid) {
       throw new Error('Incorrect PIN. Please try again.');
     }
-    if (pendingAction === 'update') {
+    if (pendingAction === 'add' || pendingAction === 'update') {
       await performSave();
     } else if (pendingAction === 'delete') {
       await performDelete();
@@ -314,8 +305,8 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
         }}
         onSubmit={handlePinSubmit}
         processing={saving}
-        title={pendingAction === 'delete' ? 'Confirm Deletion' : 'Verify Bank Update'}
-        description={pendingAction === 'delete' ? 'Enter your PIN to remove your bank account.' : 'Enter your PIN to update your bank account.'}
+        title={pendingAction === 'delete' ? 'Confirm Deletion' : pendingAction === 'add' ? 'Confirm Bank Account' : 'Verify Bank Update'}
+        description={pendingAction === 'delete' ? 'Enter your PIN to remove your bank account.' : pendingAction === 'add' ? 'Enter your PIN to save your bank account.' : 'Enter your PIN to update your bank account.'}
       />
     </>
   );
