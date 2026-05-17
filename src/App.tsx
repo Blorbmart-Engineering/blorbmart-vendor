@@ -70,8 +70,26 @@ interface StoreControls {
   holidays: Closure[];
 }
 
+const VALID_PAGES = new Set<PageKey>(['overview','orders','menu','hours','profile','txns','withdrawals','bank','security','notifs']);
+
+function getPageFromHash(): PageKey {
+  const hash = window.location.hash.replace('#', '') as PageKey;
+  return VALID_PAGES.has(hash) ? hash : 'overview';
+}
+
 function App() {
-  const [page, setPage] = useState<PageKey>('overview');
+  const [page, setPage] = useState<PageKey>(getPageFromHash);
+
+  const navigate = (p: PageKey) => {
+    window.location.hash = p;
+    setPage(p);
+  };
+
+  useEffect(() => {
+    const onHash = () => setPage(getPageFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [authHidden, setAuthHidden] = useState(false);
   const [authReady, setAuthReady] = useState(false);
@@ -220,7 +238,7 @@ function App() {
   const bankAccount: BankAccount | null = wallet?.bankAccount || null;
 
   const handleNavigate = (next: PageKey) => {
-    setPage(next);
+    navigate(next);
     setSidebarOpen(false);
   };
 
@@ -509,10 +527,6 @@ function App() {
                 onSetReadyInMinutes={async (id, minutes) => {
                   await setVendorOrderReadyInMinutes(id, minutes);
                   await loadDashboard();
-                }}
-                onSendDelay={async (id, minutes, reason) => {
-                  await sendVendorOrderDelay(id, minutes, reason);
-                  showToast('Delay notice sent.');
                 }}
                 kitchenOpen={kitchenOpen}
                 onGoHours={() => handleNavigate('hours')}
