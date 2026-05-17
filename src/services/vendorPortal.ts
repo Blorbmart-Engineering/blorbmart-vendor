@@ -345,6 +345,24 @@ export const verifyWalletPin = async (pin: string): Promise<boolean> => {
   return response.ok && payload.data?.valid === true
 }
 
+export const requestPinReset = async (): Promise<{ emailMasked: string }> => {
+  const response = await apiFetchAuth('/api/seller-wallet/pin/reset-request', {
+    method: 'POST',
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to send reset code')
+  return payload.data
+}
+
+export const confirmPinReset = async (otp: string, newPin: string): Promise<void> => {
+  const response = await apiFetchAuth('/api/seller-wallet/pin/reset', {
+    method: 'POST',
+    body: JSON.stringify({ otp, newPin }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to reset PIN')
+}
+
 export const uploadStoreLogo = async (
   imageDataUrl: string,
   onProgress?: (percent: number) => void,
