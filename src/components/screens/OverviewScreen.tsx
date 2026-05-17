@@ -31,9 +31,8 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
     <div id="screen-overview" className="screen active">
       <div className="page-header fu">
         <div className="stack-sm">
-          <div className="page-eyebrow">Today at a Glance</div>
-          <div className="page-title">Keep service smooth and cash flow clear.</div>
-          <div className="page-subtitle">This screen gives vendors the three things they care about most: money ready to withdraw, how sales are moving, and what just happened.</div>
+          <div className="page-eyebrow">Overview</div>
+          <div className="page-title">Your kitchen at a glance</div>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={onOpenWithdraw}>
@@ -51,17 +50,17 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
         <div className="bal-card hot fu fu1">
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.72)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Available Balance</div>
           <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 28, letterSpacing: '-.03em', lineHeight: 1, color: '#fff', position: 'relative', zIndex: 1 }}>{fmtNaira(wallet?.availableBalance || 0)}</div>
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.82)', marginTop: 10 }}>Cash already cleared and ready to send to your bank.</div>
+          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,.7)', marginTop: 10 }}>Ready to withdraw</div>
         </div>
         <div className="bal-card fu fu2">
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Pending Balance</div>
           <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 26, letterSpacing: '-.02em', lineHeight: 1 }}>{fmtNaira(wallet?.pendingBalance || 0)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--t2)', marginTop: 8 }}>Releases after order completion.</div>
+          <div style={{ fontSize: 11.5, color: 'var(--t2)', marginTop: 8 }}>Clears after delivery</div>
         </div>
         <div className="bal-card fu fu3">
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Total Earned</div>
           <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 26, letterSpacing: '-.02em', lineHeight: 1 }}>{fmtNaira(wallet?.totalEarned || 0)}</div>
-          <div style={{ fontSize: 11.5, color: 'var(--t2)', marginTop: 8 }}>All-time revenue on your vendor account.</div>
+          <div style={{ fontSize: 11.5, color: 'var(--t2)', marginTop: 8 }}>All-time total</div>
         </div>
       </div>
 
@@ -69,22 +68,18 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
         <div className="metric-card">
           <div className="metric-label">This Week</div>
           <div className="metric-value">{fmtNaira(summary?.earningsWeek || 0)}</div>
-          <div className="metric-note">Weekly earnings so vendors instantly know momentum.</div>
         </div>
         <div className="metric-card">
           <div className="metric-label">This Month</div>
           <div className="metric-value">{fmtNaira(summary?.earningsMonth || 0)}</div>
-          <div className="metric-note">Month-to-date payout visibility.</div>
         </div>
         <div className="metric-card">
           <div className="metric-label">Orders This Month</div>
           <div className="metric-value">{summary?.ordersThisMonth || 0}</div>
-          <div className="metric-note">A simple demand check without leaving the page.</div>
         </div>
         <div className="metric-card">
-          <div className="metric-label">Average Order</div>
+          <div className="metric-label">Avg. Order Value</div>
           <div className="metric-value">{fmtNaira(summary?.averageOrderValue || 0)}</div>
-          <div className="metric-note">Helpful for menu pricing and promos.</div>
         </div>
       </div>
 
@@ -92,8 +87,8 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Earnings Summary</div>
-              <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>A readable business snapshot, not just raw figures.</div>
+              <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Earnings summary</div>
+              <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>Last 7 days</div>
             </div>
             <span className="chip chip-orange">Busiest day: {busiestDay}</span>
           </div>
@@ -120,7 +115,7 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
-              <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Daily Earnings</div>
+              <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Daily earnings</div>
               <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>Last 7 days</div>
             </div>
             <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('txns')}>Open ledger</button>
@@ -152,8 +147,8 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
       <div className="card fu fu6">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, gap: 12, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Recent Activity</div>
-            <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>The most recent wallet events, easy to scan and tap.</div>
+            <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 16 }}>Recent activity</div>
+            <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 2 }}>Last 4 wallet events</div>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => onNavigate('txns')}>View all</button>
         </div>
