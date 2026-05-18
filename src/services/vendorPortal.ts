@@ -363,6 +363,15 @@ export const confirmPinReset = async (otp: string, newPin: string): Promise<void
   if (!response.ok) throw new Error(payload.message || 'Failed to reset PIN')
 }
 
+export const rejectVendorOrder = async (orderId: string): Promise<void> => {
+  const response = await apiFetchAuth(`/api/orders/${orderId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'cancelled' }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to reject order')
+}
+
 export const uploadStoreLogo = async (
   imageDataUrl: string,
   onProgress?: (percent: number) => void,

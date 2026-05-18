@@ -6,7 +6,6 @@ import {
   sendVendorResetEmail,
   signInVendor,
   signInVendorWithGoogle,
-  isVendorOtpVerified,
   verifyVendorEmailOtp,
 } from '../../services/vendorAuth';
 import { compressImageFile } from '../../lib/image';
@@ -88,26 +87,6 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
     };
   }, [hidden]);
 
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user || hidden) return;
-    const email = user.email || '';
-    if (!email) return;
-    isVendorOtpVerified()
-      .then((verified) => {
-        if (!verified) {
-          setStep('otp');
-          setOtpTimer(60);
-          setTimeout(() => otpRefs.current[0]?.focus(), 100);
-        } else {
-          setStep('complete');
-          setTimeout(() => onComplete(), 500);
-        }
-      })
-      .catch(() => {
-        setStep('login');
-      });
-  }, [hidden, onComplete]);
 
   const goAuthStep = (s: AuthStep) => {
     setStep(s);
@@ -123,16 +102,8 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
     try {
       setLoading('login');
       await signInVendor(loginEmail, loginPw);
-      const verified = await isVendorOtpVerified();
-      if (!verified) {
-        setStep('otp');
-        setOtpTimer(60);
-        setTimeout(() => otpRefs.current[0]?.focus(), 100);
-        onShowToast('Verification code sent to your email.');
-      } else {
-        setStep('complete');
-        setTimeout(() => onComplete(), 500);
-      }
+      setStep('complete');
+      setTimeout(() => onComplete(), 500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign in.';
       if (message.toLowerCase().includes('email otp verification required')) {
@@ -152,16 +123,8 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
     try {
       setLoading('google');
       await signInVendorWithGoogle();
-      const verified = await isVendorOtpVerified();
-      if (!verified) {
-        setStep('otp');
-        setOtpTimer(60);
-        setTimeout(() => otpRefs.current[0]?.focus(), 100);
-        onShowToast('Verification code sent to your email.');
-      } else {
-        setStep('complete');
-        setTimeout(() => onComplete(), 500);
-      }
+      setStep('complete');
+      setTimeout(() => onComplete(), 500);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign in with Google.';
       if (message.toLowerCase().includes('email otp verification required')) {
@@ -350,7 +313,7 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
       <div className="auth-left">
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 48 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg,var(--or),#CC4010)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 18, color: '#fff', boxShadow: '0 4px 20px rgba(255,107,43,.45)' }}>B</div>
+            <img src="/orangelogo.png" alt="Blorbmart" style={{ width: 40, height: 40, objectFit: 'contain', filter: 'drop-shadow(0 2px 8px rgba(249,115,22,0.45))' }} />
             <div>
               <div style={{ fontFamily: 'var(--hd)', fontWeight: 700, fontSize: 16 }}>Blorbmart</div>
               <div style={{ fontSize: 11, color: 'var(--or)', fontWeight: 600, letterSpacing: '.05em' }}>KITCHEN PORTAL</div>

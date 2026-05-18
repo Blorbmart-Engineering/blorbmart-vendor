@@ -37,7 +37,7 @@ export function Sidebar({
     <aside id="sidebar" className={open ? 'open' : ''}>
       <div className="sb-brand">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="sb-logo">B</div>
+          <img src="/orangelogo.png" className="sb-logo" alt="Blorbmart" />
           <div>
             <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>Blorbmart</div>
             <div style={{ fontSize: 10, color: 'var(--or)', fontWeight: 700, marginTop: 3, letterSpacing: '.08em' }}>VENDOR PORTAL</div>

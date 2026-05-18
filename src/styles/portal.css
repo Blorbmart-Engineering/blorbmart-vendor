@@ -27,10 +27,32 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
 @keyframes vendorLoad{0%{transform:translateX(-70%)}50%{transform:translateX(25%)}100%{transform:translateX(120%)}}
+@keyframes logoIn{0%{opacity:0;transform:scale(0.55)}65%{transform:scale(1.06)}100%{opacity:1;transform:scale(1)}}
+@keyframes logoPulse{0%,100%{filter:drop-shadow(0 0 10px rgba(249,115,22,0.35))}50%{filter:drop-shadow(0 0 28px rgba(249,115,22,0.7))}}
+@keyframes splashName{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmerSlide{from{background-position:-600px 0}to{background-position:600px 0}}
+@keyframes skeletonFlow{from{background-position:-400px 0}to{background-position:400px 0}}
 
 .fu{animation:fadeUp .48s cubic-bezier(.16,1,.3,1) both}
 .fu1{animation-delay:.05s}.fu2{animation-delay:.1s}.fu3{animation-delay:.15s}
 .fu4{animation-delay:.2s}.fu5{animation-delay:.25s}.fu6{animation-delay:.3s}
+
+/* Splash screen */
+.vendor-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(ellipse 60% 50% at 50% 44%,rgba(249,115,22,0.13) 0%,transparent 70%),linear-gradient(180deg,#0d1218 0%,#0b0f14 100%)}
+.vendor-splash-logo{width:88px;height:88px;object-fit:contain;animation:logoIn .65s cubic-bezier(.34,1.56,.64,1) both,logoPulse 2.2s ease-in-out .7s infinite}
+.vendor-splash-name{font-family:var(--hd);font-weight:800;font-size:22px;letter-spacing:.2em;color:var(--t1);margin-top:22px;animation:splashName .5s ease .5s both}
+.vendor-splash-sub{font-size:10.5px;font-weight:700;letter-spacing:.25em;color:var(--or);margin-top:7px;animation:splashName .5s ease .65s both}
+.vendor-splash-bar{width:100px;height:2px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:44px;animation:splashName .4s ease .85s both}
+.vendor-splash-bar-fill{height:100%;background:linear-gradient(90deg,transparent 0%,var(--or) 40%,var(--or2) 60%,transparent 100%);background-size:600px 100%;animation:shimmerSlide 1.5s ease-in-out infinite}
+
+/* Skeleton */
+.skel{border-radius:5px;background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:800px 100%;animation:skeletonFlow 1.5s ease-in-out infinite}
+.skel-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent),var(--s1);border:1px solid var(--b1);border-radius:var(--r1);padding:18px}
+.skel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:16px}
+.skel-chart{height:200px;border-radius:var(--r1);margin-bottom:16px}
+.skel-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--b1)}
+.skel-row:last-child{border-bottom:none}
+.skel-surface{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent),var(--s1);border:1px solid var(--b1);border-radius:var(--r1);padding:20px}
 
 .vendor-loading-track{width:100%;height:8px;border-radius:999px;background:var(--s3);overflow:hidden;border:1px solid var(--b1)}
 .vendor-loading-fill{height:100%;width:55%;border-radius:999px;background:linear-gradient(90deg,var(--or),var(--or2));animation:vendorLoad 1.25s ease-in-out infinite}
@@ -58,7 +80,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 /* Sidebar internals */
 .sb-brand{padding:20px 16px 15px;border-bottom:1px solid var(--b1);background:linear-gradient(180deg,rgba(249,115,22,.045),transparent)}
-.sb-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--or),#c94e0e);display:flex;align-items:center;justify-content:center;font-family:var(--hd);font-weight:800;font-size:15px;color:#fff;box-shadow:0 6px 18px rgba(249,115,22,.45),inset 0 1px 0 rgba(255,255,255,.15);flex-shrink:0}
+.sb-logo{width:36px;height:36px;object-fit:contain;flex-shrink:0}
 .sb-kitchen{padding:11px 14px 13px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.008)}
 .sb-avatar{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,rgba(249,115,22,.22),rgba(249,115,22,.1));border:1.5px solid rgba(249,115,22,.28);display:flex;align-items:center;justify-content:center;font-family:var(--hd);font-weight:700;font-size:12px;color:var(--or);flex-shrink:0}
 .sb-nav{flex:1;overflow-y:auto;padding:8px 10px}

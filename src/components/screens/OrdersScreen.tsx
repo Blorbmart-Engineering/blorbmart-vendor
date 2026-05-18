@@ -152,6 +152,7 @@ export function OrdersScreen({
   orders, activeTab, onTabChange, onAdvance, onReject, onSetReadyInMinutes, kitchenOpen, onGoHours,
 }: OrdersScreenProps) {
   const [readyInModal, setReadyInModal] = useState<{ orderId: string } | null>(null);
+  const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
 
   const tabs: VendorOrder['status'][] = ['new', 'accepted', 'ready', 'picked', 'done'];
   const counts = tabs.reduce(
@@ -168,6 +169,7 @@ export function OrdersScreen({
 
   return (
     <div id="screen-orders" className="screen">
+      <style>{`@keyframes badge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}`}</style>
       <div className="fu">
         <div className="page-header">
           <div className="stack-sm">
@@ -209,8 +211,15 @@ export function OrdersScreen({
               <span
                 className="order-tab-ct"
                 style={{
-                  background: activeTab === tab ? 'rgba(255,255,255,.25)' : 'var(--s4)',
-                  color: activeTab === tab ? '#fff' : 'var(--t2)',
+                  background: activeTab === tab
+                    ? 'rgba(255,255,255,.25)'
+                    : (tab === 'new' && counts['new'] > 0 ? 'rgba(249,115,22,.15)' : 'var(--s4)'),
+                  color: activeTab === tab
+                    ? '#fff'
+                    : (tab === 'new' && counts['new'] > 0 ? 'var(--or)' : 'var(--t2)'),
+                  animation: tab === 'new' && counts['new'] > 0 && activeTab !== 'new'
+                    ? 'badge-pulse 1.4s ease-in-out infinite'
+                    : 'none',
                 }}
               >
                 {counts[tab]}
@@ -325,7 +334,7 @@ export function OrdersScreen({
                   ) : (
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {isNew && (
-                        <button className="btn btn-danger btn-sm" onClick={() => onReject(order.id)}>
+                        <button className="btn btn-danger btn-sm" onClick={() => setRejectConfirmId(order.id)}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M6 18L18 6M6 6l12 12" />
                           </svg>
@@ -361,6 +370,47 @@ export function OrdersScreen({
           onConfirm={handleReadyInConfirm}
           onClose={() => setReadyInModal(null)}
         />
+      )}
+
+      {/* Reject confirmation modal */}
+      {rejectConfirmId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setRejectConfirmId(null); }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 380, padding: 24 }}>
+            <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 17, marginBottom: 8 }}>
+              Reject Order?
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 20 }}>
+              Order <b>{rejectConfirmId}</b> will be cancelled and the customer will be notified.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn btn-ghost"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => setRejectConfirmId(null)}
+              >
+                Keep Order
+              </button>
+              <button
+                className="btn btn-danger"
+                style={{ flex: 1, justifyContent: 'center' }}
+                onClick={() => {
+                  const id = rejectConfirmId;
+                  setRejectConfirmId(null);
+                  onReject(id);
+                }}
+              >
+                Yes, Reject
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -22,6 +22,7 @@ import { auth } from './lib/firebase';
 import { getVendorProfile, getVendorUserProfile, isVendorOtpVerified, signOutVendor } from './services/vendorAuth';
 import {
   advanceVendorOrderStatus,
+  rejectVendorOrder,
   archiveVendorProduct,
   bulkUpdateVendorProducts,
   buildChartFromTransactions,
@@ -40,7 +41,6 @@ import {
   markVendorNotificationRead,
   saveVendorProduct,
   saveVendorStoreControls,
-  sendVendorOrderDelay,
   setVendorProductAvailability,
   setVendorProductFeatured,
   setVendorOrderReadyInMinutes,
@@ -121,6 +121,8 @@ function App() {
   const [txDetailId, setTxDetailId] = useState<string | null>(null);
   const [foodModalOpen, setFoodModalOpen] = useState(false);
   const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
+  const [rejectOrderId, setRejectOrderId] = useState<string | null>(null);
+  const [deleteFoodId, setDeleteFoodId] = useState<string | null>(null);
 
   const initializedAuth = useRef(false);
 
@@ -255,8 +257,21 @@ function App() {
     }
   };
 
-  const rejectOrder = async () => {
-    showToast(`Order rejection is not wired yet on the backend.`, false);
+  const rejectOrder = (id: string) => {
+    setRejectOrderId(id);
+  };
+
+  const confirmRejectOrder = async () => {
+    if (!rejectOrderId) return;
+    const id = rejectOrderId;
+    setRejectOrderId(null);
+    try {
+      await rejectVendorOrder(id);
+      showToast(`Order ${id} rejected`);
+      await loadDashboard();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to reject order', false);
+    }
   };
 
   const toggleAvail = async (id: string) => {
@@ -272,15 +287,19 @@ function App() {
     }
   };
 
-  const deleteFood = async (id: string) => {
-    const item = foodItems.find((f) => f.id === id);
-    if (!item) return;
-    if (!confirm(`Remove "${item.name}" from your menu?`)) return;
+  const deleteFood = (id: string) => {
+    setDeleteFoodId(id);
+  };
 
+  const confirmDeleteFood = async () => {
+    if (!deleteFoodId) return;
+    const id = deleteFoodId;
+    const item = foodItems.find((f) => f.id === id);
+    setDeleteFoodId(null);
     try {
       await archiveVendorProduct(id);
       setFoodItems((prev) => prev.filter((f) => f.id !== id));
-      showToast(`${item.name} removed from menu`);
+      showToast(`${item?.name ?? 'Item'} removed from menu`);
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Failed to remove menu item', false);
     }
@@ -440,13 +459,11 @@ function App() {
 
   if (!authReady) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: 'var(--bg)', color: 'var(--t2)', padding: '24px' }}>
-        <div style={{ width: 'min(360px, 90vw)' }}>
-          <div style={{ marginBottom: '10px', fontWeight: 600, letterSpacing: '0.01em' }}>Loading vendor portal...</div>
-          <div className="vendor-loading-track" aria-live="polite" aria-label="Loading">
-            <div className="vendor-loading-fill" />
-          </div>
-        </div>
+      <div className="vendor-splash" role="status" aria-label="Loading Blorbmart Vendor Portal">
+        <img src="/orangelogo.png" className="vendor-splash-logo" alt="Blorbmart" />
+        <div className="vendor-splash-name">BLORBMART</div>
+        <div className="vendor-splash-sub">VENDOR PORTAL</div>
+        <div className="vendor-splash-bar"><div className="vendor-splash-bar-fill" /></div>
       </div>
     );
   }
@@ -490,7 +507,34 @@ function App() {
           />
 
           <div id="main">
-            {page === 'overview' && (
+            {page === 'overview' && dashboardLoading && wallet === null && (
+              <div style={{ animation: 'fadeUp .35s ease both' }}>
+                <div className="skel-grid">
+                  {[0,1,2,3].map(i => (
+                    <div key={i} className="skel-card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div className="skel" style={{ width: '55%', height: 10 }} />
+                      <div className="skel" style={{ width: '75%', height: 24, marginTop: 4 }} />
+                      <div className="skel" style={{ width: '40%', height: 9, marginTop: 2 }} />
+                    </div>
+                  ))}
+                </div>
+                <div className="skel skel-chart" />
+                <div className="skel-surface">
+                  <div className="skel" style={{ width: 120, height: 11, marginBottom: 16 }} />
+                  {[0,1,2,3,4].map(i => (
+                    <div key={i} className="skel-row">
+                      <div className="skel" style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0 }} />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <div className="skel" style={{ width: '45%', height: 10 }} />
+                        <div className="skel" style={{ width: '28%', height: 9 }} />
+                      </div>
+                      <div className="skel" style={{ width: 56, height: 13 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(!dashboardLoading || wallet !== null) && page === 'overview' && (
               <OverviewScreen
                 chart={chart}
                 txns={txns}
@@ -630,6 +674,44 @@ function App() {
       />
       <TxDetailModal open={!!txDetailId} tx={currentTx} onClose={() => setTxDetailId(null)} />
       <AddFoodModal open={foodModalOpen} editingItem={editingFood} onClose={() => { setFoodModalOpen(false); setEditingFoodId(null); }} onSave={saveFood} />
+
+      {/* Reject order confirmation modal */}
+      {rejectOrderId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setRejectOrderId(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 380, padding: 24 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,.12)', border: '1.5px solid rgba(239,68,68,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 18L18 6M6 6l12 12" /></svg>
+            </div>
+            <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 17, textAlign: 'center', marginBottom: 8 }}>Reject Order?</div>
+            <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center', marginBottom: 6 }}>Order <strong style={{ color: 'var(--t1)' }}>{rejectOrderId}</strong></div>
+            <div style={{ fontSize: 12.5, color: 'var(--t3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22 }}>
+              The customer will be notified that their order was rejected. This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setRejectOrderId(null)}>Cancel</button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }} onClick={confirmRejectOrder}>Reject Order</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete menu item confirmation modal */}
+      {deleteFoodId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={(e) => { if (e.target === e.currentTarget) setDeleteFoodId(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 380, padding: 24 }}>
+            <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 17, textAlign: 'center', marginBottom: 8 }}>Remove Item?</div>
+            <div style={{ fontSize: 13, color: 'var(--t3)', textAlign: 'center', lineHeight: 1.6, marginBottom: 22 }}>
+              <strong style={{ color: 'var(--t1)' }}>{foodItems.find(f => f.id === deleteFoodId)?.name ?? 'This item'}</strong> will be removed from your menu.
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setDeleteFoodId(null)}>Cancel</button>
+              <button className="btn btn-danger" style={{ flex: 1, justifyContent: 'center' }} onClick={confirmDeleteFood}>Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div id="sidebar-overlay" className={sidebarOpen ? 'open' : ''} onClick={() => setSidebarOpen(false)}></div>
 
