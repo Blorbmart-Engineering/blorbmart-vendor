@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { setupWalletPin, changeWalletPin, fetchWalletOverview, requestPinReset, confirmPinReset } from '../../services/vendorPortal';
 
 interface SecurityScreenProps {
@@ -36,12 +36,7 @@ export function SecurityScreen({ onShowToast }: SecurityScreenProps) {
   const [requestingReset, setRequestingReset] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
 
-  // Check if wallet has PIN set
-  useEffect(() => {
-    checkPinStatus();
-  }, []);
-
-  const checkPinStatus = async () => {
+  const checkPinStatus = useCallback(async () => {
     try {
       const wallet = await fetchWalletOverview();
       setHasPin(!!wallet?.pinSet);
@@ -49,7 +44,12 @@ export function SecurityScreen({ onShowToast }: SecurityScreenProps) {
       console.error('Failed to check PIN status:', error);
       setHasPin(null);
     }
-  };
+  }, []);
+
+  // Check if wallet has PIN set
+  useEffect(() => {
+    checkPinStatus();
+  }, [checkPinStatus]);
 
   // Resend cooldown ticker
   useEffect(() => {
@@ -112,6 +112,71 @@ export function SecurityScreen({ onShowToast }: SecurityScreenProps) {
     });
   };
 
+  const handleConfirmReset = useCallback(async () => {
+    if (savingPin) return;
+    setSavingPin(true);
+    try {
+      await confirmPinReset(resetOtp, resetPins[0]);
+      setHasPin(true);
+      setMode('done');
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Invalid code';
+      setResetOtpError(msg);
+      setResetPins(['', '']);
+      setResetPinPhase(0);
+      setMode('reset-otp');
+      onShowToast(msg);
+    } finally {
+      setSavingPin(false);
+    }
+  }, [savingPin, resetOtp, resetPins, onShowToast]);
+
+  const resetPinFlow = useCallback(() => {
+    setPinPhase(0);
+    setPins(['', '', '']);
+    setMismatch(false);
+  }, []);
+
+  const handlePinComplete = useCallback(async () => {
+    if (savingPin) return;
+
+    setSavingPin(true);
+    try {
+      if (mode === 'setup') {
+        if (pins[0] !== pins[1]) {
+          setMismatch(true);
+          setTimeout(() => {
+            setPins(['', '']);
+            setPinPhase(0);
+            setMismatch(false);
+          }, 600);
+          return;
+        }
+        await setupWalletPin(pins[0]);
+        setHasPin(true);
+        onShowToast('PIN set successfully!');
+      } else if (mode === 'change') {
+        if (pins[1] !== pins[2]) {
+          setMismatch(true);
+          setTimeout(() => {
+            setPins([pins[0], '', '']);
+            setPinPhase(1);
+            setMismatch(false);
+          }, 600);
+          return;
+        }
+        await changeWalletPin(pins[0], pins[1]);
+        onShowToast('PIN changed successfully!');
+      }
+      setMode('done');
+    } catch (error) {
+      onShowToast(error instanceof Error ? error.message : 'Failed to save PIN');
+      resetPinFlow();
+    } finally {
+      setSavingPin(false);
+    }
+  }, [savingPin, mode, pins, onShowToast, resetPinFlow]);
+
   // Auto-advance reset PIN phases
   useEffect(() => {
     if (mode !== 'reset-pin') return;
@@ -138,75 +203,7 @@ export function SecurityScreen({ onShowToast }: SecurityScreenProps) {
       }
       handleConfirmReset();
     }
-  }, [resetPinPhase, resetPins, mode]);
-
-  const handleConfirmReset = async () => {
-    if (savingPin) return;
-    setSavingPin(true);
-    try {
-      await confirmPinReset(resetOtp, resetPins[0]);
-      setHasPin(true);
-      setMode('done');
-    } catch (error) {
-      // OTP was rejected — send them back to OTP entry
-      const msg = error instanceof Error ? error.message : 'Invalid code';
-      setResetOtpError(msg);
-      setResetPins(['', '']);
-      setResetPinPhase(0);
-      setMode('reset-otp');
-      onShowToast(msg);
-    } finally {
-      setSavingPin(false);
-    }
-  };
-
-  const resetPinFlow = () => {
-    setPinPhase(0);
-    setPins(['', '', '']);
-    setMismatch(false);
-  };
-
-  const handlePinComplete = async () => {
-    if (savingPin) return;
-    
-    setSavingPin(true);
-    try {
-      if (mode === 'setup') {
-        // Setup: pins[0]=new, pins[1]=confirm
-        if (pins[0] !== pins[1]) {
-          setMismatch(true);
-          setTimeout(() => {
-            setPins(['', '']);
-            setPinPhase(0);
-            setMismatch(false);
-          }, 600);
-          return;
-        }
-        await setupWalletPin(pins[0]);
-        setHasPin(true);
-        onShowToast('PIN set successfully!');
-      } else if (mode === 'change') {
-        // Change: pins[0]=current, pins[1]=new, pins[2]=confirm
-        if (pins[1] !== pins[2]) {
-          setMismatch(true);
-          setTimeout(() => {
-            setPins([pins[0], '', '']);
-            setPinPhase(1);
-            setMismatch(false);
-          }, 600);
-          return;
-        }
-        await changeWalletPin(pins[0], pins[1]);
-        onShowToast('PIN changed successfully!');
-      }
-      setMode('done');
-    } catch (error) {
-      onShowToast(error instanceof Error ? error.message : 'Failed to save PIN');
-      resetPinFlow();
-    } finally {
-      setSavingPin(false);
-    }
-  };
+  }, [resetPinPhase, resetPins, mode, handleConfirmReset]);
 
   const tapPin = (k: string) => {
     if (savingPin) return;
@@ -262,7 +259,7 @@ export function SecurityScreen({ onShowToast }: SecurityScreenProps) {
         handlePinComplete();
       }
     }
-  }, [pinPhase, pins, mode]);
+  }, [pinPhase, pins, mode, handlePinComplete]);
 
   return (
     <div id="screen-security" className="screen">

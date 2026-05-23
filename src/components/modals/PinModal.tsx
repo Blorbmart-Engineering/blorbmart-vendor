@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface PinModalProps {
   open: boolean;
@@ -32,13 +32,12 @@ export function PinModal({
   const [err, setErr] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!open) {
-      setPin('');
-      setErr('');
-      setSubmitting(false);
-    }
-  }, [open]);
+  const handleClose = () => {
+    setPin('');
+    setErr('');
+    setSubmitting(false);
+    onClose();
+  };
 
   const tapPin = (k: string) => {
     if (submitting || processing) return;
@@ -59,8 +58,7 @@ export function PinModal({
     setSubmitting(true);
     try {
       await onSubmit(pin);
-      setPin('');
-      onClose();
+      handleClose();
     } catch (error) {
       setErr(error instanceof Error ? error.message : 'PIN verification failed');
       setSubmitting(false);
@@ -68,7 +66,7 @@ export function PinModal({
   };
 
   return (
-    <div className={`overlay ${open ? 'open' : ''}`} id="pin-modal" onClick={(e) => { if ((e.target as HTMLElement).id === 'pin-modal') onClose(); }}>
+    <div className={`overlay ${open ? 'open' : ''}`} id="pin-modal" onClick={(e) => { if ((e.target as HTMLElement).id === 'pin-modal') handleClose(); }}>
       <div className="modal" style={{ maxWidth: 360 }}>
         <div style={{ marginBottom: 22 }}>
           <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 20, marginBottom: 4 }}>{title}</div>
@@ -106,7 +104,7 @@ export function PinModal({
         {err && <div style={{ color: 'var(--re)', fontSize: 12.5, marginBottom: 14, textAlign: 'center' }}>{err}</div>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
-          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose} disabled={submitting || processing}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={handleClose} disabled={submitting || processing}>
             Cancel
           </button>
           <button

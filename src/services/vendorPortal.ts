@@ -615,7 +615,7 @@ export const setVendorProductFeatured = async (id: string, featured: boolean) =>
   })
 }
 
-export const fetchVendorOrders = async (_uid: string): Promise<VendorOrder[]> => {
+export const fetchVendorOrders = async (): Promise<VendorOrder[]> => {
   const response = await apiFetchAuth('/api/orders/vendor')
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.message || 'Failed to fetch orders')

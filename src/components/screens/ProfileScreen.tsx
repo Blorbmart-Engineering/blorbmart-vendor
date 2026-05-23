@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { compressImageFile } from '../../lib/image';
 import { uploadStoreLogo, updateStoreProfile, fetchStoreProfile, uploadProfilePhotoToCloudinary, updateVendorProfilePhoto, getVendorProfilePhoto, deleteVendorProfilePhoto, markVendorProfileComplete } from '../../services/vendorPortal';
 
@@ -45,12 +45,7 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
     logo: '',
   });
 
-  useEffect(() => {
-    loadProfile();
-    loadProfilePhoto();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       setLoading(true);
       const profile = await fetchStoreProfile();
@@ -76,7 +71,7 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
     } finally {
       setLoading(false);
     }
-  };
+  }, [onShowToast]);
 
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
@@ -137,14 +132,19 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
     onShowToast('Logo removed');
   };
 
-  const loadProfilePhoto = async () => {
+  const loadProfilePhoto = useCallback(async () => {
     try {
       const photoUrl = await getVendorProfilePhoto();
       setProfilePhoto(photoUrl || null);
     } catch (error) {
       console.error('Failed to load profile photo:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadProfile();
+    loadProfilePhoto();
+  }, [loadProfile, loadProfilePhoto]);
 
   const handleProfilePhotoUpload = async (file: File) => {
     if (!file.type.startsWith('image/')) {

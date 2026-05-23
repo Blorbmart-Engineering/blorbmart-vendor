@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { onAuthStateChanged, type User } from 'firebase/auth';
 import { AuthShell } from './components/auth/AuthShell';
 import { Toast } from './components/common/Toast';
@@ -48,19 +48,7 @@ import {
 import type { VendorProfile, VendorUserProfile } from './types/firebase';
 import type { BankAccount, VendorOrder, WalletOverview, WalletSummary, WithdrawalRecord } from './types/portal';
 import type { PageKey } from './types/ui';
-
-export const PAGES: Record<PageKey, string> = {
-  overview: 'Overview',
-  orders: 'Orders',
-  menu: 'Menu Items',
-  hours: 'Hours & Status',
-  profile: 'Store Profile',
-  txns: 'Transactions',
-  withdrawals: 'Withdrawals',
-  bank: 'Bank Account',
-  security: 'Security & PIN',
-  notifs: 'Notifications',
-};
+import { PAGES } from './constants/pages';
 
 interface Closure { date: string; reason: string; }
 interface StoreControls {
@@ -186,7 +174,7 @@ function App() {
     setTimeout(() => setToast((t) => ({ ...t, visible: false })), 3500);
   };
 
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     if (!currentUser) return;
 
     setDashboardLoading(true);
@@ -196,7 +184,7 @@ function App() {
         fetchWalletSummary().catch(() => null),
         fetchWalletTransactions().catch(() => []),
         fetchWithdrawals().catch(() => []),
-        fetchVendorOrders(currentUser.uid).catch(() => []),
+        fetchVendorOrders().catch(() => []),
         fetchVendorProducts(currentUser.uid).catch(() => []),
         fetchVendorNotifications(currentUser.uid).catch(() => []),
         store ? Promise.resolve(store) : fetchVendorStore(currentUser.uid).catch(() => null),
@@ -217,13 +205,15 @@ function App() {
     } finally {
       setDashboardLoading(false);
     }
-  };
+  // store intentionally omitted — only re-load when user changes, not on every store update
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser) {
       loadDashboard();
     }
-  }, [currentUser]);
+  }, [currentUser, loadDashboard]);
 
   const unreadCount = notifs.filter((n) => !n.read).length;
   const ordersBadge = orders.filter((o) => o.status === 'new').length;
@@ -376,7 +366,7 @@ function App() {
     try {
       await markVendorNotificationRead(currentUser.uid, id);
       setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    } catch (error) {
+    } catch {
       showToast('Failed to mark notification as read', false);
     }
   };
@@ -386,7 +376,7 @@ function App() {
     try {
       await markAllVendorNotificationsRead(currentUser.uid);
       setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
-    } catch (error) {
+    } catch {
       showToast('Failed to update notifications', false);
     }
   };
@@ -606,14 +596,18 @@ function App() {
                   try {
                     const next = [...closures, { date, reason }];
                     await saveControls({ holidays: next });
-                  } catch {}
+                  } catch {
+                    showToast('Failed to save closure', false);
+                  }
                 }}
                 onRemoveClosure={async (idx) => {
                   const next = closures.filter((_, i) => i !== idx);
                   removeClosure(idx);
                   try {
                     await saveControls({ holidays: next });
-                  } catch {}
+                  } catch {
+                    showToast('Failed to remove closure', false);
+                  }
                 }}
                 pauseMinutes={pauseMinutes}
                 onPauseMinutesChange={setPauseMinutes}

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import type { BankAccount } from '../../types/portal';
 import { PinModal } from '../modals/PinModal';
 import { fetchBanks, verifyBankAccount, saveBankAccount, deleteBankAccount, verifyWalletPin } from '../../services/vendorPortal';
@@ -27,13 +27,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
   const [pinModalOpen, setPinModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<'add' | 'update' | 'delete' | null>(null);
 
-  useEffect(() => {
-    if (editing) {
-      loadBanks();
-    }
-  }, [editing]);
-
-  const loadBanks = async () => {
+  const loadBanks = useCallback(async () => {
     setLoadingBanks(true);
     try {
       const bankList = await fetchBanks();
@@ -43,11 +37,17 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     } finally {
       setLoadingBanks(false);
     }
-  };
+  }, [onShowToast]);
 
-  const handleVerifyAccount = async () => {
+  useEffect(() => {
+    if (editing) {
+      loadBanks();
+    }
+  }, [editing, loadBanks]);
+
+  const handleVerifyAccount = useCallback(async () => {
     if (!selectedBankCode || acctInput.length !== 10) return;
-    
+
     setVerifying(true);
     try {
       const result = await verifyBankAccount(selectedBankCode, acctInput);
@@ -59,7 +59,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     } finally {
       setVerifying(false);
     }
-  };
+  }, [selectedBankCode, acctInput, onShowToast]);
 
   useEffect(() => {
     if (selectedBankCode && acctInput.length === 10) {
@@ -68,7 +68,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
       }, 500);
       return () => clearTimeout(timeout);
     }
-  }, [selectedBankCode, acctInput]);
+  }, [selectedBankCode, acctInput, handleVerifyAccount]);
 
   const handleSave = async () => {
     if (!selectedBankCode || acctInput.length !== 10 || !acctName) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { BankAccount } from '../../types/portal';
 import { fmtNaira } from '../../utils/format';
 
@@ -38,15 +38,14 @@ export function WithdrawModal({
   const [pin, setPin] = useState('');
   const [err2, setErr2] = useState('');
 
-  useEffect(() => {
-    if (!open) {
-      setStep(1);
-      setAmount('');
-      setErr1('');
-      setPin('');
-      setErr2('');
-    }
-  }, [open]);
+  const handleClose = () => {
+    setStep(1);
+    setAmount('');
+    setErr1('');
+    setPin('');
+    setErr2('');
+    onClose();
+  };
 
   const handleNext = () => {
     const amt = Number(amount);
@@ -79,7 +78,7 @@ export function WithdrawModal({
     setStep(3);
     try {
       await onSubmit({ amount: Number(amount), pin });
-      onClose();
+      handleClose();
       onShowToast('Withdrawal submitted successfully.');
     } catch (error) {
       setStep(2);
@@ -97,7 +96,7 @@ export function WithdrawModal({
   };
 
   return (
-    <div className={`overlay ${open ? 'open' : ''}`} id="withdraw-modal" onClick={(e) => { if ((e.target as HTMLElement).id === 'withdraw-modal') onClose(); }}>
+    <div className={`overlay ${open ? 'open' : ''}`} id="withdraw-modal" onClick={(e) => { if ((e.target as HTMLElement).id === 'withdraw-modal') handleClose(); }}>
       <div className="modal">
         {step === 1 && (
           <div id="wd-step1">
