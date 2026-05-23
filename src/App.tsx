@@ -372,8 +372,9 @@ function App() {
   };
 
   const markNotifRead = async (id: string) => {
+    if (!currentUser) return;
     try {
-      await markVendorNotificationRead(id);
+      await markVendorNotificationRead(currentUser.uid, id);
       setNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
     } catch (error) {
       showToast('Failed to mark notification as read', false);
@@ -381,8 +382,9 @@ function App() {
   };
 
   const markAllRead = async () => {
+    if (!currentUser) return;
     try {
-      await markAllVendorNotificationsRead(notifs);
+      await markAllVendorNotificationsRead(currentUser.uid);
       setNotifs((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (error) {
       showToast('Failed to update notifications', false);

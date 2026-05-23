@@ -750,27 +750,21 @@ export const fetchVendorNotifications = async (uid: string): Promise<Notif[]> =>
         title: String(data.title || 'Notification'),
         body: String(data.message || data.body || ''),
         time: formatRelative(data.createdAt || data.updatedAt),
-        read: Boolean(data.read),
+        read: data.status === 'read',
         icon: 'check' as const,
       }
     })
     .sort((a, b) => Number(!a.read) - Number(!b.read))
 }
 
-export const markVendorNotificationRead = async (id: string) => {
-  await updateDoc(doc(db, 'notifications', id), {
-    read: true,
-    readAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  })
+export const markVendorNotificationRead = async (uid: string, id: string) => {
+  const response = await apiFetchAuth(`/api/notifications/${uid}/${id}/read`, { method: 'PATCH' })
+  if (!response.ok) throw new Error('Failed to mark notification as read')
 }
 
-export const markAllVendorNotificationsRead = async (notifications: Notif[]) => {
-  await Promise.all(
-    notifications
-      .filter((item) => !item.read)
-      .map((item) => markVendorNotificationRead(item.id)),
-  )
+export const markAllVendorNotificationsRead = async (uid: string) => {
+  const response = await apiFetchAuth(`/api/notifications/${uid}/read-all`, { method: 'PATCH' })
+  if (!response.ok) throw new Error('Failed to mark notifications as read')
 }
 
 export const buildChartFromTransactions = (txns: Txn[]) => {
