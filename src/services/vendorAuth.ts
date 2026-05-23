@@ -30,18 +30,6 @@ interface RegisterVendorInput {
   password: string
 }
 
-interface VendorKycInput {
-  businessType: string
-  address: string
-  state: string
-  lga: string
-  idType: string
-  idNumber: string
-  cuisineTypes: string[]
-  selfieCaptured: boolean
-  vendorType: 'general' | 'food'
-}
-
 const usersCollection = 'users'
 const vendorsCollection = 'vendors'
 
@@ -142,7 +130,6 @@ const writeVendorUserDocs = async (
       businessEmail: user.email || '',
       businessPhone: input.phone,
       vendorStatus: 'pending',
-      kycStatus: 'pending',
       status: 'pending',
       walletBalance: 0,
       rating: 0,
@@ -290,32 +277,6 @@ export const isVendorOtpVerified = async () => {
   return Boolean(payload.data?.verified)
 }
 
-export const submitVendorKyc = async (uid: string, input: VendorKycInput) => {
-  try {
-    await setDoc(
-      doc(db, vendorsCollection, uid),
-      {
-        address: input.address,
-        businessType: input.businessType,
-        vendorType: input.vendorType,
-        state: input.state,
-        lga: input.lga,
-        idType: input.idType,
-        idNumber: input.idNumber,
-        cuisineTypes: input.cuisineTypes,
-        selfieCaptured: input.selfieCaptured,
-        vendorStatus: 'pending',
-        kycStatus: 'pending',
-        status: 'pending',
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true },
-    )
-  } catch (error) {
-    throw new Error(getFriendlyAuthError(error))
-  }
-}
-
 export const sendVendorResetEmail = async (email: string) => {
   try {
     await sendPasswordResetEmail(auth, email)
@@ -339,16 +300,12 @@ export const getVendorProfile = async (uid: string): Promise<VendorProfile | nul
     businessEmail: String(data.businessEmail || ''),
     businessPhone: String(data.businessPhone || ''),
     vendorStatus: String(data.vendorStatus || data.status || 'pending'),
-    kycStatus: String(data.kycStatus || 'pending'),
     status: data.status ? String(data.status) : undefined,
     address: data.address ? String(data.address) : undefined,
     businessType: data.businessType ? String(data.businessType) : undefined,
     state: data.state ? String(data.state) : undefined,
     lga: data.lga ? String(data.lga) : undefined,
-    idType: data.idType ? String(data.idType) : undefined,
-    idNumber: data.idNumber ? String(data.idNumber) : undefined,
     cuisineTypes: Array.isArray(data.cuisineTypes) ? data.cuisineTypes.map(String) : [],
-    selfieCaptured: Boolean(data.selfieCaptured),
     walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : 0,
     rating: typeof data.rating === 'number' ? data.rating : 0,
     totalSales: typeof data.totalSales === 'number' ? data.totalSales : 0,

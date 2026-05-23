@@ -20,16 +20,12 @@ export interface VendorProfile {
   businessEmail: string
   businessPhone: string
   vendorStatus: string
-  kycStatus: string
   status?: string
   address?: string
   businessType?: string
   state?: string
   lga?: string
-  idType?: string
-  idNumber?: string
   cuisineTypes?: string[]
-  selfieCaptured?: boolean
   walletBalance?: number
   rating?: number
   totalSales?: number

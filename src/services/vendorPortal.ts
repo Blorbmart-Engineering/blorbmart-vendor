@@ -37,8 +37,9 @@ const statusToUiStatus = (status: string): Order['status'] => {
   if (normalized === 'placed') return 'new'
   if (normalized === 'confirmed' || normalized === 'preparing' || normalized === 'processing') return 'accepted'
   if (normalized === 'ready') return 'ready'
-  if (normalized === 'out_for_delivery' || normalized === 'shipped') return 'picked'
-  return 'done'
+  if (normalized === 'out_for_delivery' || normalized === 'picked_up' || normalized === 'shipped') return 'picked'
+  if (normalized === 'delivered' || normalized === 'done' || normalized === 'completed' || normalized === 'cancelled' || normalized === 'failed') return 'done'
+  return 'new'
 }
 
 const uiStatusToNextBackendStatus = (status: string) => {
@@ -52,10 +53,19 @@ const uiStatusToNextBackendStatus = (status: string) => {
 const toMillis = (value: unknown) => {
   if (value instanceof Timestamp) return value.toMillis()
   if (value && typeof value === 'object' && 'toMillis' in value && typeof value.toMillis === 'function') {
-    return value.toMillis()
+    return (value as { toMillis: () => number }).toMillis()
   }
   if (value instanceof Date) return value.getTime()
   if (typeof value === 'number') return value
+  if (value && typeof value === 'object') {
+    const v = value as Record<string, unknown>
+    const seconds = Number(v._seconds ?? v.seconds ?? NaN)
+    if (!Number.isNaN(seconds)) return seconds * 1000 + Math.floor(Number(v._nanoseconds ?? v.nanoseconds ?? 0) / 1e6)
+  }
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    if (!Number.isNaN(parsed)) return parsed
+  }
   return Date.now()
 }
 
