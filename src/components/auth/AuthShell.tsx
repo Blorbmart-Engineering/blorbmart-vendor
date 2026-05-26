@@ -150,26 +150,40 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
     if (pw.length < 6) { setRegErr('Password must be at least 6 characters.'); return; }
     if (!regAgree) { setRegErr('Please agree to the terms.'); return; }
     setRegErr('');
+    setLoading('register');
+
+    // Step 1: create the Firebase account. If the account already exists from a
+    // previous partially-completed attempt (network dropped after account creation
+    // but before OTP was sent), treat it as recoverable and continue to OTP.
+    let accountAlreadyExisted = false;
     try {
-      setLoading('register');
-      await registerVendor({
-        firstName: fname,
-        lastName: lname,
-        businessName: kitchen,
-        email,
-        phone,
-        password: pw,
-      });
-      await sendVendorEmailOtp(email);
-      setStep('otp');
-      setOtpTimer(60);
-      setTimeout(() => otpRefs.current[0]?.focus(), 100);
-      onShowToast('Account created. Verification code sent to your email.');
+      await registerVendor({ firstName: fname, lastName: lname, businessName: kitchen, email, phone, password: pw });
     } catch (error) {
-      setRegErr(error instanceof Error ? error.message : 'Unable to create your account.');
-    } finally {
-      setLoading(null);
+      const message = error instanceof Error ? error.message : 'Unable to create your account.';
+      if (!message.toLowerCase().includes('already in use')) {
+        setRegErr(message);
+        setLoading(null);
+        return;
+      }
+      accountAlreadyExisted = true;
     }
+
+    // Step 2: send OTP — non-critical, user can resend from the next screen
+    try {
+      await sendVendorEmailOtp(email);
+    } catch {
+      // network hiccup — proceed anyway, resend button is available on OTP screen
+    }
+
+    setLoading(null);
+    setStep('otp');
+    setOtpTimer(60);
+    setTimeout(() => otpRefs.current[0]?.focus(), 100);
+    onShowToast(
+      accountAlreadyExisted
+        ? 'Verification code sent. Check your email to continue.'
+        : 'Account created. Verification code sent to your email.'
+    );
   };
 
   const doOtp = async () => {
