@@ -31,7 +31,13 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     setLoadingBanks(true);
     try {
       const bankList = await fetchBanks();
-      setBanks(bankList.filter(b => b.active).sort((a, b) => a.name.localeCompare(b.name)));
+      const sorted = bankList.filter(b => b.active).sort((a, b) => a.name.localeCompare(b.name));
+      // Inject Paystack's test bank at the top so it's usable when the daily live-resolve limit is hit
+      const testBank = { name: 'Test Bank (001)', code: '001', active: true };
+      const withTest = import.meta.env.MODE !== 'production'
+        ? [testBank, ...sorted.filter(b => b.code !== '001')]
+        : sorted;
+      setBanks(withTest);
     } catch (error) {
       onShowToast(error instanceof Error ? error.message : 'Failed to load banks');
     } finally {
