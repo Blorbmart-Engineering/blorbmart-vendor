@@ -45,30 +45,34 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     }
   }, [editing, loadBanks]);
 
-  const handleVerifyAccount = useCallback(async () => {
+  useEffect(() => {
     if (!selectedBankCode || acctInput.length !== 10) return;
 
-    setVerifying(true);
-    try {
-      const result = await verifyBankAccount(selectedBankCode, acctInput);
-      setAcctName(result.accountName);
-      onShowToast('Account verified successfully');
-    } catch (error) {
-      setAcctName('');
-      onShowToast(error instanceof Error ? error.message : 'Failed to verify account');
-    } finally {
-      setVerifying(false);
-    }
-  }, [selectedBankCode, acctInput, onShowToast]);
+    let cancelled = false;
+    const timeout = setTimeout(async () => {
+      setVerifying(true);
+      try {
+        const result = await verifyBankAccount(selectedBankCode, acctInput);
+        if (cancelled) return;
+        setAcctName(result.accountName);
+        onShowToast('Account verified successfully');
+      } catch (error) {
+        if (cancelled) return;
+        setAcctName('');
+        onShowToast(error instanceof Error ? error.message : 'Failed to verify account');
+      } finally {
+        if (!cancelled) setVerifying(false);
+      }
+    }, 500);
 
-  useEffect(() => {
-    if (selectedBankCode && acctInput.length === 10) {
-      const timeout = setTimeout(() => {
-        handleVerifyAccount();
-      }, 500);
-      return () => clearTimeout(timeout);
-    }
-  }, [selectedBankCode, acctInput, handleVerifyAccount]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+    // onShowToast intentionally omitted — including it causes an infinite loop
+    // because toast state changes recreate the callback on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBankCode, acctInput]);
 
   const handleSave = async () => {
     if (!selectedBankCode || acctInput.length !== 10 || !acctName) {
