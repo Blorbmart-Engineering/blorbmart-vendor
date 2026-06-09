@@ -32,9 +32,7 @@ export function BankScreen({ onShowToast, bankAccount, onBankAccountChange }: Ba
     try {
       const bankList = await fetchBanks();
       const sorted = bankList.filter(b => b.active).sort((a, b) => a.name.localeCompare(b.name));
-      // Always inject Paystack test bank at top — backend only bypasses Paystack for it in non-production
-      const testBank = { name: 'Test Bank (001)', code: '001', active: true };
-      setBanks([testBank, ...sorted.filter(b => b.code !== '001')]);
+      setBanks(sorted);
     } catch (error) {
       onShowToast(error instanceof Error ? error.message : 'Failed to load banks');
     } finally {

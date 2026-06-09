@@ -536,7 +536,7 @@ export const saveVendorProduct = async ({
       mealDetails: {
         prepTimeMinutes: item.prep,
       },
-      createdAt: item.id ? undefined : serverTimestamp(),
+      ...(item.id ? {} : { createdAt: serverTimestamp() }),
       updatedAt: serverTimestamp(),
     },
     { merge: true },

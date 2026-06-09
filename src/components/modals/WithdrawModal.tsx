@@ -79,7 +79,7 @@ export function WithdrawModal({
     try {
       await onSubmit({ amount: Number(amount), pin });
       handleClose();
-      onShowToast('Withdrawal submitted successfully.');
+      onShowToast('Withdrawal request sent to Paystack. Status will update after payout confirmation.');
     } catch (error) {
       setStep(2);
       setErr2(error instanceof Error ? error.message : 'Withdrawal failed');
