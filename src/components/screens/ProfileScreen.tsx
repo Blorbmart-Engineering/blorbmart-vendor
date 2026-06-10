@@ -117,8 +117,9 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
       const logoUrl = await uploadStoreLogo(compressed, (progress) => {
         setUploadProgress(progress);
       });
+      await updateStoreProfile({ logo: logoUrl });
       setFormData((prev) => ({ ...prev, logo: logoUrl }));
-      onShowToast('Logo uploaded successfully!');
+      onShowToast('Logo uploaded and saved!');
     } catch (error) {
       onShowToast(error instanceof Error ? error.message : 'Failed to upload logo');
     } finally {
@@ -127,9 +128,14 @@ export function ProfileScreen({ onShowToast, uid, onProfileSaved }: ProfileScree
     }
   };
 
-  const handleRemoveLogo = () => {
-    setFormData((prev) => ({ ...prev, logo: '' }));
-    onShowToast('Logo removed');
+  const handleRemoveLogo = async () => {
+    try {
+      await updateStoreProfile({ logo: '' });
+      setFormData((prev) => ({ ...prev, logo: '' }));
+      onShowToast('Logo removed');
+    } catch (error) {
+      onShowToast(error instanceof Error ? error.message : 'Failed to remove logo');
+    }
   };
 
   const loadProfilePhoto = useCallback(async () => {
