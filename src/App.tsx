@@ -20,6 +20,7 @@ import { WithdrawalsScreen } from './components/screens/WithdrawalsScreen';
 import { WEEK_SCHEDULE, type FoodItem, type Notif, type Order, type Txn, type WeekScheduleRow } from './data/mock';
 import { auth } from './lib/firebase';
 import { getVendorProfile, getVendorUserProfile, isVendorOtpVerified, signOutVendor } from './services/vendorAuth';
+import { registerVendorPushNotifications } from './services/pushNotifications';
 import {
   advanceVendorOrderStatus,
   rejectVendorOrder,
@@ -164,6 +165,8 @@ function App() {
       } finally {
         setAuthReady(true);
       }
+
+      registerVendorPushNotifications(user.uid).catch(() => undefined);
     });
 
     return () => unsubscribe();

@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
+import { isSupported, type Messaging } from 'firebase/messaging'
 
 const requiredEnv = {
   VITE_FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -34,3 +35,10 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export { app }
+
+// Messaging only works in browsers that support service workers + push
+export const getMessagingIfSupported = async (): Promise<Messaging | null> => {
+  if (!(await isSupported().catch(() => false))) return null
+  const { getMessaging } = await import('firebase/messaging')
+  return getMessaging(app)
+}
