@@ -291,8 +291,10 @@ export function AuthShell({ hidden, onComplete, onShowToast }: AuthShellProps) {
         address: bizAddress,
         state: bizState,
         lga: bizLga,
-        vendorStatus: 'active',
-        status: 'active',
+        vendorStatus: 'pending',
+        status: 'pending',
+        profileComplete: true,
+        approvalRequestedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
       
