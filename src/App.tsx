@@ -666,6 +666,9 @@ function App() {
             setWithdrawProcessing(true);
             await createWithdrawal({ amount, pin });
             await loadDashboard();
+          } catch (error) {
+            await loadDashboard();
+            throw error;
           } finally {
             setWithdrawProcessing(false);
           }
