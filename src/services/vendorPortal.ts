@@ -16,7 +16,7 @@ import type { FoodItem, Notif, Order, Txn } from '../data/mock'
 import { db } from '../lib/firebase'
 import { apiFetchAuth } from '../lib/api'
 import type { VendorProfile, VendorUserProfile } from '../types/firebase'
-import type { BankAccount, VendorOrder, WalletOverview, WalletSummary, WithdrawalRecord } from '../types/portal'
+import type { BankAccount, PreorderConfig, VendorOrder, WalletOverview, WalletSummary, WithdrawalRecord } from '../types/portal'
 
 const CATEGORY_TO_PRODUCT: Record<FoodItem['cat'], { categoryId: string; categoryName: string; subCategoryId: string; subCategoryName: string }> = {
   rice: { categoryId: 'food_drinks', categoryName: 'Food & Drinks', subCategoryId: 'meals', subCategoryName: 'Meals' },
@@ -34,6 +34,7 @@ const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
 
 const statusToUiStatus = (status: string): Order['status'] => {
   const normalized = String(status || '').toLowerCase()
+  if (normalized === 'scheduled') return 'scheduled'
   if (normalized === 'placed') return 'new'
   if (normalized === 'confirmed' || normalized === 'preparing' || normalized === 'processing') return 'accepted'
   if (normalized === 'ready') return 'ready'
@@ -658,6 +659,9 @@ export const fetchVendorOrders = async (): Promise<VendorOrder[]> => {
             createdAt: String(entry.createdAt || ''),
           }))
         : [],
+      fulfillmentType: String(data.fulfillmentType || 'asap'),
+      scheduledLabel: String(data.scheduledLabel || ''),
+      scheduledFor: data.scheduledFor ? String(data.scheduledFor) : undefined,
       createdAtMs: toMillis(data.createdAt),
     } as VendorOrder
   })
@@ -694,6 +698,30 @@ export const sendVendorOrderDelay = async (orderId: string, delayMinutes: number
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.message || 'Failed to send delay notification')
+}
+
+export const fetchVendorPreorderConfig = async (): Promise<{ preorderConfig: PreorderConfig; statusMessage: string | null } | null> => {
+  const response = await apiFetchAuth('/api/stores/me/preorder')
+  if (!response.ok) return null
+  const payload = await response.json()
+  return payload.data || null
+}
+
+export const saveVendorPreorderConfig = async (config: PreorderConfig) => {
+  const response = await apiFetchAuth('/api/stores/me/preorder', {
+    method: 'PUT',
+    body: JSON.stringify(config),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to save preorder settings')
+  return payload.data as { preorderConfig: PreorderConfig }
+}
+
+export const promoteVendorPreorders = async () => {
+  const response = await apiFetchAuth('/api/orders/preorders/promote-me', { method: 'POST' })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(payload.message || 'Failed to start fulfillment day')
+  return payload.data as { count: number; promoted: string[] }
 }
 
 export const saveVendorStoreControls = async ({

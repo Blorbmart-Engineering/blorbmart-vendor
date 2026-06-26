@@ -33,6 +33,9 @@ import {
   fetchVendorProducts,
   fetchVendorStoreControls,
   fetchVendorStore,
+  fetchVendorPreorderConfig,
+  saveVendorPreorderConfig,
+  promoteVendorPreorders,
   fetchWalletOverview,
   fetchWalletSummary,
   fetchWalletTransactions,
@@ -47,7 +50,7 @@ import {
   setVendorOrderReadyInMinutes,
 } from './services/vendorPortal';
 import type { VendorProfile, VendorUserProfile } from './types/firebase';
-import type { BankAccount, VendorOrder, WalletOverview, WalletSummary, WithdrawalRecord } from './types/portal';
+import type { BankAccount, PreorderConfig, VendorOrder, WalletOverview, WalletSummary, WithdrawalRecord } from './types/portal';
 import type { PageKey } from './types/ui';
 import { PAGES } from './constants/pages';
 
@@ -58,6 +61,15 @@ interface StoreControls {
   weeklyHours: WeekScheduleRow[];
   holidays: Closure[];
 }
+
+const DEFAULT_PREORDER_CONFIG: PreorderConfig = {
+  enabled: false,
+  fulfillmentDays: [],
+  fulfillmentTime: '10:00',
+  cutoffHoursBefore: 24,
+  maxOrdersPerDay: null,
+  allowAsapWhenOpen: false,
+};
 
 const VALID_PAGES = new Set<PageKey>(['overview','orders','menu','hours','profile','txns','withdrawals','bank','security','notifs']);
 
@@ -100,6 +112,8 @@ function App() {
   const [schedule, setSchedule] = useState<WeekScheduleRow[]>(WEEK_SCHEDULE);
   const [closures, setClosures] = useState<Closure[]>([]);
   const [storeControls, setStoreControls] = useState<StoreControls | null>(null);
+  const [preorderConfig, setPreorderConfig] = useState<PreorderConfig>(DEFAULT_PREORDER_CONFIG);
+  const [preorderStatusMessage, setPreorderStatusMessage] = useState<string | null>(null);
   const [pauseMinutes, setPauseMinutes] = useState(30);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [withdrawProcessing, setWithdrawProcessing] = useState(false);
@@ -145,11 +159,12 @@ function App() {
         if (!otpVerified) {
           setAuthHidden(false);
         }
-        const [vendorData, userData, storeData, controls] = await Promise.all([
+        const [vendorData, userData, storeData, controls, preorderData] = await Promise.all([
           getVendorProfile(user.uid),
           getVendorUserProfile(user.uid),
           fetchVendorStore(user.uid),
           fetchVendorStoreControls().catch(() => null),
+          fetchVendorPreorderConfig().catch(() => null),
         ]);
         setVendorProfile(vendorData);
         setUserProfile(userData);
@@ -159,6 +174,21 @@ function App() {
           setKitchenOpen(Boolean(controls.isOpen));
           if (Array.isArray(controls.weeklyHours) && controls.weeklyHours.length) setSchedule(controls.weeklyHours);
           if (Array.isArray(controls.holidays)) setClosures(controls.holidays);
+          const rawPreorder = controls.preorderConfig as Partial<PreorderConfig> | undefined;
+          if (rawPreorder) {
+            setPreorderConfig({
+              enabled: Boolean(rawPreorder.enabled),
+              fulfillmentDays: Array.isArray(rawPreorder.fulfillmentDays) ? rawPreorder.fulfillmentDays : [],
+              fulfillmentTime: String(rawPreorder.fulfillmentTime || '10:00'),
+              cutoffHoursBefore: Number(rawPreorder.cutoffHoursBefore) || 24,
+              maxOrdersPerDay: rawPreorder.maxOrdersPerDay != null ? Number(rawPreorder.maxOrdersPerDay) : null,
+              allowAsapWhenOpen: Boolean(rawPreorder.allowAsapWhenOpen),
+            });
+          }
+        }
+        if (preorderData) {
+          setPreorderConfig(preorderData.preorderConfig);
+          setPreorderStatusMessage(preorderData.statusMessage);
         }
       } catch (error) {
         console.error('Failed to load vendor profile:', error);
@@ -220,6 +250,8 @@ function App() {
 
   const unreadCount = notifs.filter((n) => !n.read).length;
   const ordersBadge = orders.filter((o) => o.status === 'new').length;
+  const scheduledOrdersCount = orders.filter((o) => o.status === 'scheduled').length;
+  const preorderOnly = preorderConfig.enabled && !preorderConfig.allowAsapWhenOpen;
 
   const currentTx = txns.find((t) => t.id === txDetailId) || null;
   const editingFood = foodItems.find((f) => f.id === editingFoodId) || null;
@@ -535,8 +567,14 @@ function App() {
                 txns={txns}
                 wallet={wallet}
                 summary={summary}
+                scheduledOrdersCount={scheduledOrdersCount}
+                preorderStatusMessage={preorderStatusMessage}
                 onOpenWithdraw={() => setWithdrawOpen(true)}
                 onNavigate={handleNavigate}
+                onOpenScheduledOrders={() => {
+                  setActiveOrderTab('scheduled');
+                  handleNavigate('orders');
+                }}
                 onOpenTxDetail={(id) => setTxDetailId(id)}
               />
             )}
@@ -568,6 +606,8 @@ function App() {
                   await loadDashboard();
                 }}
                 kitchenOpen={kitchenOpen}
+                preorderStatusMessage={preorderStatusMessage}
+                preorderOnly={preorderOnly}
                 onGoHours={() => handleNavigate('hours')}
               />
             )}
@@ -620,6 +660,31 @@ function App() {
                     showToast(`Store paused for ${pauseMinutes} minutes`);
                   } catch (error) {
                     showToast(error instanceof Error ? error.message : 'Failed to pause store', false);
+                  }
+                }}
+                preorderConfig={preorderConfig}
+                preorderStatusMessage={preorderStatusMessage}
+                onPreorderChange={(patch) => setPreorderConfig((prev) => ({ ...prev, ...patch }))}
+                onSavePreorder={async () => {
+                  try {
+                    const result = await saveVendorPreorderConfig(preorderConfig);
+                    setPreorderConfig(result.preorderConfig);
+                    const refreshed = await fetchVendorPreorderConfig();
+                    if (refreshed) setPreorderStatusMessage(refreshed.statusMessage);
+                    showToast('Preorder settings saved');
+                  } catch (error) {
+                    showToast(error instanceof Error ? error.message : 'Failed to save preorder settings', false);
+                  }
+                }}
+                onPromotePreorders={async () => {
+                  try {
+                    const result = await promoteVendorPreorders();
+                    showToast(`Started fulfillment day — ${result.count} order(s) moved to New`);
+                    await loadDashboard();
+                    setActiveOrderTab('new');
+                    handleNavigate('orders');
+                  } catch (error) {
+                    showToast(error instanceof Error ? error.message : 'Failed to start fulfillment day', false);
                   }
                 }}
               />

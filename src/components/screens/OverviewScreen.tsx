@@ -8,8 +8,11 @@ interface OverviewScreenProps {
   txns: Txn[];
   wallet: WalletOverview | null;
   summary: WalletSummary | null;
+  scheduledOrdersCount: number;
+  preorderStatusMessage: string | null;
   onOpenWithdraw: () => void;
   onNavigate: (page: PageKey) => void;
+  onOpenScheduledOrders: () => void;
   onOpenTxDetail: (id: string) => void;
 }
 
@@ -21,7 +24,7 @@ const txMeta = (t: Txn['type']) =>
     adjustment: { cls: 'chip-blue', label: 'Adjustment' },
   }[t] || { cls: 'chip-orange', label: 'Other' });
 
-export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, onNavigate, onOpenTxDetail }: OverviewScreenProps) {
+export function OverviewScreen({ chart, txns, wallet, summary, scheduledOrdersCount, preorderStatusMessage, onOpenWithdraw, onNavigate, onOpenScheduledOrders, onOpenTxDetail }: OverviewScreenProps) {
   const max = Math.max(1, ...chart.map((d) => d.v));
   const chartPeak = Math.max(0, ...chart.map((item) => item.v));
   const chartTotal = chart.reduce((sum, item) => sum + item.v, 0);
@@ -45,6 +48,26 @@ export function OverviewScreen({ chart, txns, wallet, summary, onOpenWithdraw, o
           </button>
         </div>
       </div>
+
+      {(scheduledOrdersCount > 0 || preorderStatusMessage) && (
+        <div className="card fu fu4" style={{ marginBottom: 20, border: '1px solid rgba(249,115,22,.2)', background: 'var(--org)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontFamily: 'var(--hd)', fontWeight: 700, fontSize: 15, color: 'var(--or)' }}>
+                {scheduledOrdersCount > 0
+                  ? `${scheduledOrdersCount} preorder${scheduledOrdersCount === 1 ? '' : 's'} scheduled`
+                  : 'Preorders enabled'}
+              </div>
+              {preorderStatusMessage && (
+                <div style={{ fontSize: 12.5, color: 'var(--t2)', marginTop: 4 }}>{preorderStatusMessage}</div>
+              )}
+            </div>
+            {scheduledOrdersCount > 0 && (
+              <button className="btn btn-primary btn-sm" onClick={onOpenScheduledOrders}>View Scheduled</button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="bal-grid fu" style={{ display: 'grid', gridTemplateColumns: '1.35fr 1fr 1fr', gap: 14, marginBottom: 20 }}>
         <div className="bal-card hot fu fu1">
