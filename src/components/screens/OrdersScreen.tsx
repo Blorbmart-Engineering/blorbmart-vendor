@@ -9,10 +9,13 @@ interface OrdersScreenProps {
   onReject: (id: string) => void | Promise<void>;
   onSetReadyInMinutes: (id: string, minutes: number) => void | Promise<void>;
   kitchenOpen: boolean;
+  preorderStatusMessage: string | null;
+  preorderOnly: boolean;
   onGoHours: () => void;
 }
 
 const ORDER_FLOW = {
+  scheduled: { action: null,             chipCls: 'chip-orange', chipLabel: 'Scheduled',        color: 'var(--or)' },
   new:      { action: 'Accept Order',   chipCls: 'chip-yellow', chipLabel: 'New Order',        color: 'var(--ye)' },
   accepted: { action: 'Mark as Ready',  chipCls: 'chip-blue',   chipLabel: 'Preparing',        color: 'var(--bl)' },
   ready:    { action: 'Dispatch Order', chipCls: 'chip-orange', chipLabel: 'Ready for Pickup', color: 'var(--or)' },
@@ -21,7 +24,7 @@ const ORDER_FLOW = {
 } as const;
 
 const TAB_LABELS: Record<VendorOrder['status'], string> = {
-  new: 'New', accepted: 'Preparing', ready: 'Ready', picked: 'Delivery', done: 'Done',
+  scheduled: 'Scheduled', new: 'New', accepted: 'Preparing', ready: 'Ready', picked: 'Delivery', done: 'Done',
 };
 
 const PRESET_MINUTES = [10, 15, 20, 30, 45, 60];
@@ -149,12 +152,12 @@ function ReadyInModal({
 }
 
 export function OrdersScreen({
-  orders, activeTab, onTabChange, onAdvance, onReject, onSetReadyInMinutes, kitchenOpen, onGoHours,
+  orders, activeTab, onTabChange, onAdvance, onReject, onSetReadyInMinutes, kitchenOpen, preorderStatusMessage, preorderOnly, onGoHours,
 }: OrdersScreenProps) {
   const [readyInModal, setReadyInModal] = useState<{ orderId: string } | null>(null);
   const [rejectConfirmId, setRejectConfirmId] = useState<string | null>(null);
 
-  const tabs: VendorOrder['status'][] = ['new', 'accepted', 'ready', 'picked', 'done'];
+  const tabs: VendorOrder['status'][] = ['scheduled', 'new', 'accepted', 'ready', 'picked', 'done'];
   const counts = tabs.reduce(
     (acc, tab) => ({ ...acc, [tab]: orders.filter((o) => o.status === tab).length }),
     {} as Record<VendorOrder['status'], number>,
@@ -185,8 +188,8 @@ export function OrdersScreen({
                 animation: 'glow 1.8s ease-in-out infinite',
               }}
             />
-            <span style={{ fontSize: 13, fontWeight: 700, color: kitchenOpen ? 'var(--gr)' : 'var(--ye)' }}>
-              {kitchenOpen ? 'Kitchen Open' : 'Kitchen Paused'}
+            <span style={{ fontSize: 13, fontWeight: 700, color: preorderOnly ? 'var(--or)' : kitchenOpen ? 'var(--gr)' : 'var(--ye)' }}>
+              {preorderOnly ? (preorderStatusMessage || 'Accepting preorders') : kitchenOpen ? 'Kitchen Open' : 'Kitchen Paused'}
             </span>
             <button className="btn btn-ghost btn-sm" onClick={onGoHours}>Change Status</button>
           </div>
@@ -237,6 +240,7 @@ export function OrdersScreen({
           ) : (
             filtered.map((order) => {
               const flow = ORDER_FLOW[order.status];
+              const isScheduled = order.status === 'scheduled';
               const isNew = order.status === 'new';
               const isDone = order.status === 'done';
               const elapsed = elapsedMinutes(order.createdAtMs);
@@ -307,6 +311,12 @@ export function OrdersScreen({
                   </div>
 
                   {/* Customer note */}
+                  {order.scheduledLabel && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, background: 'var(--org)', border: '1px solid rgba(249,115,22,.2)', borderRadius: 'var(--r3)', padding: '8px 12px', fontSize: 12, color: 'var(--or)', marginBottom: 12 }}>
+                      <span><b>Fulfillment:</b> {order.scheduledLabel}</span>
+                    </div>
+                  )}
+
                   {order.note && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, background: 'var(--yeg)', border: '1px solid rgba(245,158,11,.2)', borderRadius: 'var(--r3)', padding: '8px 12px', fontSize: 12, color: 'var(--ye)', marginBottom: 12 }}>
                       <svg style={{ flexShrink: 0, marginTop: 1 }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -324,7 +334,11 @@ export function OrdersScreen({
                   ) : null}
 
                   {/* Actions */}
-                  {isDone ? (
+                  {isScheduled ? (
+                    <div style={{ fontSize: 12.5, color: 'var(--t2)', fontWeight: 600 }}>
+                      Paid preorder — moves to New when fulfillment day starts (or use Start Fulfillment Day in Hours).
+                    </div>
+                  ) : isDone ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, color: 'var(--gr)', fontSize: 13, fontWeight: 700 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M5 13l4 4L19 7" />

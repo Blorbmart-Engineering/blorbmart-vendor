@@ -45,7 +45,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  status: 'new' | 'accepted' | 'ready' | 'picked' | 'done';
+  status: 'scheduled' | 'new' | 'accepted' | 'ready' | 'picked' | 'done';
   customer: string;
   addr: string;
   items: OrderItem[];
@@ -54,6 +54,9 @@ export interface Order {
   note: string;
   readyInMinutes?: number;
   delayNotices?: { delayMinutes: number; reason: string; createdAt?: string }[];
+  scheduledLabel?: string;
+  scheduledFor?: string;
+  fulfillmentType?: string;
 }
 
 export interface WeekScheduleRow {

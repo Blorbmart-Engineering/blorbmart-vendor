@@ -46,6 +46,15 @@ export interface VendorOrder extends Order {
   createdAtMs: number
 }
 
+export interface PreorderConfig {
+  enabled: boolean
+  fulfillmentDays: string[]
+  fulfillmentTime: string
+  cutoffHoursBefore: number
+  maxOrdersPerDay: number | null
+  allowAsapWhenOpen: boolean
+}
+
 export interface VendorDashboardData {
   wallet: WalletOverview | null
   summary: WalletSummary | null
