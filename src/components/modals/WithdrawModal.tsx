@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { BankAccount } from '../../types/portal';
 import { fmtNaira } from '../../utils/format';
 
@@ -38,12 +38,20 @@ export function WithdrawModal({
   const [pin, setPin] = useState('');
   const [err2, setErr2] = useState('');
 
-  const handleClose = () => {
+  const resetForm = () => {
     setStep(1);
     setAmount('');
     setErr1('');
     setPin('');
     setErr2('');
+  };
+
+  useEffect(() => {
+    if (!open) resetForm();
+  }, [open]);
+
+  const handleClose = () => {
+    resetForm();
     onClose();
   };
 
@@ -81,6 +89,7 @@ export function WithdrawModal({
       handleClose();
       onShowToast('Withdrawal request sent to Paystack. Status will update after payout confirmation.');
     } catch (error) {
+      setPin('');
       setStep(2);
       setErr2(error instanceof Error ? error.message : 'Withdrawal failed');
     }
@@ -105,7 +114,7 @@ export function WithdrawModal({
                 <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 20 }}>Withdraw Funds</div>
                 <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 3 }}>Keep the payout flow short and confidence-building.</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
+              <button className="btn btn-ghost btn-sm" onClick={handleClose}>Close</button>
             </div>
             <div style={{ background: 'var(--org)', border: '1px solid rgba(249,115,22,.2)', borderRadius: 'var(--r2)', padding: '13px 16px', marginBottom: 18 }}>
               <div style={{ fontSize: 10, color: 'var(--or)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>Available Balance</div>
@@ -129,7 +138,7 @@ export function WithdrawModal({
             )}
             {err1 && <div id="wd-err1" style={{ color: 'var(--re)', fontSize: 12.5, marginBottom: 10 }}>{err1}</div>}
             <div style={{ display: 'flex', gap: 9 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>Cancel</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={handleClose}>Cancel</button>
               <button className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }} onClick={handleNext}>Continue</button>
             </div>
           </div>
@@ -142,7 +151,7 @@ export function WithdrawModal({
                 <div style={{ fontFamily: 'var(--hd)', fontWeight: 800, fontSize: 20 }}>Confirm PIN</div>
                 <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 3 }}>One last step before payout is sent.</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
+              <button className="btn btn-ghost btn-sm" onClick={handleClose}>Close</button>
             </div>
             <div style={{ background: 'var(--s3)', borderRadius: 'var(--r2)', padding: '12px 14px', marginBottom: 20, fontSize: 13 }}>
               <div style={{ fontWeight: 700, marginBottom: 2 }}>{bankAccount?.accountName || 'No verified bank account'}</div>
@@ -160,7 +169,7 @@ export function WithdrawModal({
             <Keypad onTap={tapPin} />
             {err2 && <div id="wd-err2" style={{ color: 'var(--re)', fontSize: 12.5, marginTop: 8, textAlign: 'center' }}>{err2}</div>}
             <div style={{ display: 'flex', gap: 9, marginTop: 14 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setStep(1)}>Back</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setPin(''); setErr2(''); setStep(1); }}>Back</button>
               <button className="btn btn-primary" style={{ flex: 2, justifyContent: 'center' }} onClick={handleConfirm} disabled={processing}>Confirm Withdrawal</button>
             </div>
           </div>
